@@ -1,0 +1,19 @@
+// import { assertEquals } from "@std/assert";
+// import { wrap_imports } from "./wrap_import.ts";
+
+// function test(src: string, res: string) {
+//     assertEquals(wrap_imports(src, [
+//         (importPath) => {
+//             return importPath.toUpperCase();
+//         }
+//     ]), res);
+// }
+
+// Deno.test("wrap import", () => {
+//     test(`import {} from "a"`, `import {} from "A"`);
+//     test(`import {} from"a"`, `import {} from"A"`);
+//     test(`import "a"`, `import "A"`);
+//     test(`import"a"`, `import"A"`);
+
+//     test(`import "a"; import "b"`, `import "A"; import "B"`);
+// });
