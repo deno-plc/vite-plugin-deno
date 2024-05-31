@@ -25,7 +25,7 @@ import { z } from "zod";
 import { assertEquals } from "@std/assert";
 import { ensureFile } from "@std/fs";
 import { encodeBase64 } from "@std/encoding/base64";
-// @deno-types=npm:@types/json-stable-stringify
+// @deno-types=npm:@types/json-stable-stringify@1.0.36
 import stringify from "json-stable-stringify";
 
 let lockfile: Lockfile | null = null;

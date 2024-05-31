@@ -21,7 +21,6 @@
  * USA or see <https://www.gnu.org/licenses/>.
  */
 
-// @deno-types=npm:@types/semver
 import { maxSatisfying, valid } from "semver";
 import { flush_lockfile_changes, openLockfile } from "../lockfile.ts";
 import { getNPMMeta } from "./meta.ts";

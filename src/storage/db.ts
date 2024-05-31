@@ -24,7 +24,32 @@
 import { Database } from "@db/sqlite";
 import { ensureDirSync } from "@std/fs";
 import { resolve } from "@std/path";
-import system_cache_dir from "https://deno.land/x/dir@1.5.2/cache_dir/mod.ts";
+
+// import system_cache_dir from "https://deno.land/x/dir@1.5.2/cache_dir/mod.ts";
+function system_cache_dir(): string | null {
+    switch (Deno.build.os) {
+        case "linux": {
+            const xdg = Deno.env.get("XDG_CACHE_HOME");
+            if (xdg) return xdg;
+
+            const home = Deno.env.get("HOME");
+            if (home) return `${home}/.cache`;
+            break;
+        }
+
+        case "darwin": {
+            const home = Deno.env.get("HOME");
+            if (home) return `${home}/Library/Caches`;
+            break;
+        }
+
+        case "windows":
+            return Deno.env.get("LOCALAPPDATA") ?? null;
+    }
+
+    return null;
+}
+
 
 const cache_dir: string = Deno.env.has("VITE_PLUGIN_DENO_CACHE")
     ? Deno.env.get("VITE_PLUGIN_DENO_CACHE")!

@@ -25,11 +25,10 @@ import { assert } from "@std/assert";
 import type { Opt } from "../options.ts";
 import { fetch_immutable } from "../storage/immutable.ts";
 import { getNPMMeta } from "./meta.ts";
-// @deno-types="npm:@types/tar-stream"
-import { extract } from "npm:tar-stream";
-// @deno-types="npm:@types/node"
+import { extract } from "tar-stream";
+// @deno-types="npm:@types/node@18.16.19"
 import { createGunzip } from "node:zlib";
-// @deno-types="npm:@types/node"
+// @deno-types="npm:@types/node@18.16.19"
 import { Buffer } from "node:buffer";
 import { set_blob } from "../storage/blobfs.ts";
 import { db } from "../storage/db.ts";
@@ -71,7 +70,7 @@ async function loadTarball(o: Opt, packageName: string, version: string) {
 
     const tar = extract();
 
-    tar.on("entry", (header, stream, cb) => {
+    tar.on("entry", (header: { name: string; }, stream: NodeJS.ReadableStream, cb: () => void) => {
         const path = header.name.substring("package/".length);
         // console.log(header.name);
         const data: Buffer[] = [];

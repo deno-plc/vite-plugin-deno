@@ -29,7 +29,6 @@ import { parseNPM } from "./npm/specifier.ts";
 import { resolveNPMVersion } from "./npm/registry.ts";
 import { getNPMMeta } from "./npm/meta.ts";
 import { assert } from "@std/assert";
-// @deno-types="npm:@types/semver"
 import { satisfies, valid } from "semver";
 import { resolveNPMExport } from "./npm/resolve.ts";
 

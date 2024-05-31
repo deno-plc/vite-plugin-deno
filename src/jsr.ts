@@ -23,7 +23,6 @@
 
 import { assert } from "@std/assert";
 import { z } from "zod";
-// @deno-types="npm:@types/semver";
 import { maxSatisfying, valid } from "semver";
 import { flush_lockfile_changes, openLockfile } from "./lockfile.ts";
 import { encodeBase64 } from "jsr:@std/encoding@^0.223.0/base64";

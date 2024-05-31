@@ -7,14 +7,12 @@
         "lineWidth": 120
     },
     "tasks": {
-        "check": "deno fmt && deno lint && deno check mod.ts && deno test --parallel",
-        "check-ci": "deno fmt --check && deno lint && deno check mod.ts && deno test --parallel"
+        "check": "deno fmt && deno lint && deno publish --dry-run && deno test --parallel",
+        "check-ci": "deno fmt --check && deno lint && deno publish --dry-run && deno test --parallel"
     },
     "lint": {
         "rules": {
-            "exclude": [
-                "no-inferrable-types"
-            ]
+            "exclude": []
         }
     },
     "imports": {
@@ -26,6 +24,8 @@
         "@std/testing": "jsr:@std/testing@^0.223.0",
         "json-stable-stringify": "npm:json-stable-stringify@^1.1.1",
         "semver": "npm:semver@^7.6.0",
+        "tar-stream": "npm:tar-stream@^3.1.7",
+        "validate-npm-package-name": "npm:validate-npm-package-name@^5.0.1",
         "vite": "npm:vite@^5.2.12",
         "zod": "npm:zod@^3.22.5"
     }

@@ -21,7 +21,7 @@
  * USA or see <https://www.gnu.org/licenses/>.
  */
 
-import validate from "npm:validate-npm-package-name";
+import validate from "validate-npm-package-name";
 
 export interface NPM {
     name: string;
