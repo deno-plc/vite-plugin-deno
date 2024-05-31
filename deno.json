@@ -7,7 +7,7 @@
         "lineWidth": 120
     },
     "tasks": {
-        "check": "deno fmt && deno lint && deno publish --dry-run && deno test --parallel",
+        "check": "deno fmt && deno lint && deno publish --dry-run --allow-dirty && deno test --parallel",
         "check-ci": "deno fmt --check && deno lint && deno publish --dry-run && deno test --parallel"
     },
     "lint": {

@@ -70,7 +70,7 @@ async function loadTarball(o: Opt, packageName: string, version: string) {
 
     const tar = extract();
 
-    tar.on("entry", (header: { name: string; }, stream: NodeJS.ReadableStream, cb: () => void) => {
+    tar.on("entry", (header: { name: string }, stream: NodeJS.ReadableStream, cb: () => void) => {
         const path = header.name.substring("package/".length);
         // console.log(header.name);
         const data: Buffer[] = [];

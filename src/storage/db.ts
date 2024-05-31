@@ -50,7 +50,6 @@ function system_cache_dir(): string | null {
     return null;
 }
 
-
 const cache_dir: string = Deno.env.has("VITE_PLUGIN_DENO_CACHE")
     ? Deno.env.get("VITE_PLUGIN_DENO_CACHE")!
     : `${system_cache_dir()}/vite-plugin-deno-cache`;

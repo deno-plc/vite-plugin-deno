@@ -24,7 +24,7 @@
 import { z } from "zod";
 import { valid, validRange } from "semver";
 
-export type RecordOrString = string | { [Key: string]: RecordOrString; };
+export type RecordOrString = string | { [Key: string]: RecordOrString };
 
 export const RecordOrString: z.ZodType<RecordOrString> = z.union([
     z.string(),
