@@ -29,12 +29,12 @@ export function resolveNPMExport(exportEntry: RecordOrString | null): string | n
     } else {
         return resolveNPMExport(
             exportEntry["import"] ||
-            exportEntry["require"] ||
-            exportEntry["browser"] ||
-            exportEntry["default"] ||
-            exportEntry["deno"] ||
-            exportEntry["node"] ||
-            null,
+                exportEntry["require"] ||
+                exportEntry["browser"] ||
+                exportEntry["default"] ||
+                exportEntry["deno"] ||
+                exportEntry["node"] ||
+                null,
         );
     }
 }

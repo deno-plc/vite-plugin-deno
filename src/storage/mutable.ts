@@ -71,8 +71,9 @@ async function fetch_online(url: URL) {
     });
     if (res.ok) {
         const content = new Uint8Array(await res.arrayBuffer());
-        db.sql`INSERT OR IGNORE INTO mutable_url(url,blob_ref) VALUES (${url.href}, ${(await set_blob(content)).digest.sha512
-            })`;
+        db.sql`INSERT OR IGNORE INTO mutable_url(url,blob_ref) VALUES (${url.href}, ${
+            (await set_blob(content)).digest.sha512
+        })`;
         const text = new TextDecoder().decode(content);
         instanceCache.set(url.href, text);
         return text;

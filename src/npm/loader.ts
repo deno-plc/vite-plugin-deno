@@ -32,8 +32,9 @@ export async function loadNPMFile(o: Opt, p: NPM) {
     const file = p.path;
 
     const rec =
-        db.sql`SELECT data FROM blobs, npm_tar WHERE sha512 = blob_ref AND package = ${p.name} AND version = ${p.version} AND (file = ${file} OR file = ${file + ".js"
-            } OR file = ${file + ".cjs"} OR file = ${file + ".mjs"}) LIMIT 1`[0];
+        db.sql`SELECT data FROM blobs, npm_tar WHERE sha512 = blob_ref AND package = ${p.name} AND version = ${p.version} AND (file = ${file} OR file = ${
+            file + ".js"
+        } OR file = ${file + ".cjs"} OR file = ${file + ".mjs"}) LIMIT 1`[0];
     if (rec) {
         return new Uint8Array(rec.data);
     } else {

@@ -49,7 +49,7 @@ export async function fetch_immutable({ url, digest, lockfileID }: {
         const searchDigest = digest instanceof DoubleDigest ? digest.sha512 : digest;
         const { data, sha256 } =
             db.sql`SELECT data, sha256 FROM blobs, immutable_url WHERE sha512 = blob_ref AND url = ${url.href} AND (sha256 = ${searchDigest} OR sha512 = ${searchDigest}) LIMIT 1`[
-            0
+                0
             ] ?? {};
         if (data) {
             await updateIntegrity(lockfileID ?? url.href, sha256);
@@ -73,9 +73,9 @@ export async function fetch_immutable({ url, digest, lockfileID }: {
     return content.data;
 }
 
-const fetchQueue = new Map<string, Promise<{ data: Uint8Array; finalURL: string; } | null>>();
+const fetchQueue = new Map<string, Promise<{ data: Uint8Array; finalURL: string } | null>>();
 
-async function fetch_online(url: URL): Promise<{ data: Uint8Array; finalURL: string; } | null> {
+async function fetch_online(url: URL): Promise<{ data: Uint8Array; finalURL: string } | null> {
     if (fetchQueue.has(url.href)) {
         return await fetchQueue.get(url.href)!;
     }
