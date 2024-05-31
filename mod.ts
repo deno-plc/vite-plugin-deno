@@ -1,3 +1,26 @@
+/**
+ * @license LGPL-2.1-or-later
+ *
+ * vite-plugin-deno
+ *
+ * Copyright (C) 2024 Hans Schallmoser
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301
+ * USA or see <https://www.gnu.org/licenses/>.
+ */
+
 import type { Plugin } from "vite";
 import { fetch_jsr_file, parse_jsr_specifier } from "./src/jsr.ts";
 import { dirname } from "jsr:@std/path@0.217";
@@ -8,39 +31,14 @@ import { assert } from "@std/assert";
 import { parseNPM } from "./src/npm/specifier.ts";
 import { loadNPMFile } from "./src/npm/loader.ts";
 import { join } from "@std/path";
-
-/**
- * Load import maps (only basic imports field supported, no includes from other files)
- * @param path path to import map file
- */
-export async function readImportMap(path: string): Promise<ImportMap> {
-    const content = JSON.parse(await Deno.readTextFile(path));
-    const map = new Map<string, string>();
-    if (content.imports && typeof content.imports === "object") {
-        for (const replacedImport in content.imports) {
-            map.set(replacedImport, String(content.imports[replacedImport]));
-        }
-    }
-    return {
-        lookup(id) {
-            return map.get(id) ?? null;
-        },
-    };
-}
-
-/**
- * Parsed import map
- */
-export interface ImportMap {
-    lookup(id: string): string | null;
-}
+import { readImportMap } from "./src/utils/importMap.ts";
 
 /**
  * Plugin configuration
  */
 export interface PluginDenoOptions {
     /**
-     * Path to deno.json
+     * Path to deno.json, defaults to ./deno.json
      */
     deno_json?: string;
     /**
@@ -93,12 +91,18 @@ export async function pluginDeno(options: PluginDenoOptions = {}): Promise<Plugi
                         }
                     }
                 }
+                /**
+                 * [issue] [flaky] Sometimes vite tries to resolve ids that contain '[object Promise]' which indicates that as Promise has been casted to string.
+                 */
                 if (id.includes("[object Promise]")) {
                     throw new Error(`[Plugin-Deno] cannot resolve invalid id: ${id}`);
                 }
 
                 const resolved = await resolveWithImportMap(o, id, importer);
-                // console.log(`%c${id} => ${resolved}`, "color: #444");
+
+                /**
+                 * Make sure '[object Promise]' ids don't originate in plugin-deno
+                 */
                 if (resolved?.includes("[object Promise]")) {
                     throw new Error(`[Plugin-Deno] resolved to invalid: ${id}`);
                 }
@@ -106,6 +110,9 @@ export async function pluginDeno(options: PluginDenoOptions = {}): Promise<Plugi
             },
         },
         async load(id) {
+            /**
+             * https://
+             */
             if (id.startsWith("remote:")) {
                 id = id.replace(/https\:\/(?=[a-z])/, "https://");
                 const url = id.substring(7);
@@ -118,6 +125,7 @@ export async function pluginDeno(options: PluginDenoOptions = {}): Promise<Plugi
                     .decode(content)
                     .replace(`//# sourceMappingURL=`, `//# sourceMappingURL=${dirname(url)}/`);
             }
+
             if (id.startsWith("jsr:")) {
                 const p = parse_jsr_specifier(id)!;
                 const code = await fetch_jsr_file(p);
@@ -126,14 +134,18 @@ export async function pluginDeno(options: PluginDenoOptions = {}): Promise<Plugi
                     map: null,
                 };
             }
+
             if (id.startsWith("npm:")) {
                 const p = parseNPM(id)!;
                 const code = new TextDecoder().decode(await loadNPMFile(o, p));
+                // load source maps (otherwise the paths would point to invalid urls)
+                // Additionally vite disallows loading of paths that have not been previously imported
                 const mappingStart = code.indexOf("//# sourceMappingURL=");
                 let map: undefined | string = undefined;
                 if (mappingStart !== -1) {
                     const mappingURL = code.substring(mappingStart + "//# sourceMappingURL=".length).split("\n")[0]!
                         .trim();
+                    // data urls don't depend on path anyway
                     if (!mappingURL.startsWith("data:")) {
                         const path = join(dirname(p.path), mappingURL).replaceAll("\\", "/");
                         map = new TextDecoder().decode(

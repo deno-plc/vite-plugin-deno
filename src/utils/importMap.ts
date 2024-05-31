@@ -21,11 +21,28 @@
  * USA or see <https://www.gnu.org/licenses/>.
  */
 
-import { fetch_immutable } from "./storage/immutable.ts";
+/**
+ * Load import maps (only basic imports field supported, no includes from other files)
+ * @param path path to import map file
+ */
+export async function readImportMap(path: string): Promise<ImportMap> {
+    const content = JSON.parse(await Deno.readTextFile(path));
+    const map = new Map<string, string>();
+    if (content.imports && typeof content.imports === "object") {
+        for (const replacedImport in content.imports) {
+            map.set(replacedImport, String(content.imports[replacedImport]));
+        }
+    }
+    return {
+        lookup(id) {
+            return map.get(id) ?? null;
+        },
+    };
+}
 
-export async function load_remote(id: string): Promise<Uint8Array | null> {
-    return await fetch_immutable({
-        url: new URL(id.substring("remote:".length)),
-        lockfileID: id,
-    });
+/**
+ * Parsed import map
+ */
+export interface ImportMap {
+    lookup(id: string): string | null;
 }

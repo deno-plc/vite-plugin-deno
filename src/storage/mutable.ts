@@ -1,3 +1,26 @@
+/**
+ * @license LGPL-2.1-or-later
+ *
+ * vite-plugin-deno
+ *
+ * Copyright (C) 2024 Hans Schallmoser
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301
+ * USA or see <https://www.gnu.org/licenses/>.
+ */
+
 import type { Opt } from "../options.ts";
 import { set_blob } from "./blobfs.ts";
 import { db } from "./db.ts";
@@ -48,9 +71,8 @@ async function fetch_online(url: URL) {
     });
     if (res.ok) {
         const content = new Uint8Array(await res.arrayBuffer());
-        db.sql`INSERT OR IGNORE INTO mutable_url(url,blob_ref) VALUES (${url.href}, ${
-            (await set_blob(content)).digest.sha512
-        })`;
+        db.sql`INSERT OR IGNORE INTO mutable_url(url,blob_ref) VALUES (${url.href}, ${(await set_blob(content)).digest.sha512
+            })`;
         const text = new TextDecoder().decode(content);
         instanceCache.set(url.href, text);
         return text;
