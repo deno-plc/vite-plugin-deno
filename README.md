@@ -157,7 +157,9 @@ export const config: InlineConfig = {
         await pluginDeno({
             allowed_undeclared_dependencies: ["@prefresh/core", "@prefresh/utils"], // injected HMR code
         }),
-        prefresh() as Plugin, // HMR Plugin
+        prefresh({
+            exclude: [/^npm:/, /registry.npmjs.org/], // see below
+        }) as Plugin, // HMR Plugin
     ],
     // JSX transform
     esbuild: {
@@ -179,6 +181,9 @@ And this to your `deno.json`:
 If you want to use the Preact DevTools, follow the instructions there: https://preactjs.github.io/preact-devtools/ (it's
 one import)
 
+We need the prefresh exclude rule to replicate the internal exclude of all paths containing `node_modules`. Otherwise
+prefresh would inject HMR helpers into the code that powers HMR, which causes strange and hard to debug ReferenceErrors.
+
 ## Known limitations
 
 ### Build scripts
@@ -195,6 +200,10 @@ dependency (`exclude: [/lodash-es/]`) and install it via NPM/Yarn.
 Some other plugins require Babel and Babel plugins. The Babel plugin loader depends on `node_modules`, so you have to
 install these using NPM/Yarn. In order to get the best DX possible, you should avoid Babel based plugins (for most
 setups Babel isn't really needed, see Usage wit Preact).
+
+### PostCSS/TailwindCSS
+
+`tailwindcss` currently needs to be installed via NPM/Yarn, otherwise the PostCSS plugin loader is unable to find it.
 
 ## License (LGPL-2.1-or-later)
 
