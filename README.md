@@ -206,6 +206,26 @@ setups Babel isn't really needed, see Usage wit Preact).
 `tailwindcss` currently needs to be installed via NPM/Yarn, otherwise the PostCSS plugin loader is unable to find it.
 You could also use the Tailwind Play CDN during development.
 
+### `Deno.stat` workaround needed
+
+Until https://github.com/denoland/deno/issues/24899 has been resolved, you need to include the following snippet in
+order to achieve the correct behavior when `node:fs.stat()` is called with an invalid file path. Otherwise you get
+errors like `[vite] Pre-transform error: EINVAL: invalid argument, stat`.
+
+```typescript
+const deno_stat = Deno.stat;
+
+Deno.stat = (...args) => {
+    const path = args[0].toString().replaceAll("\\", "/");
+
+    if (path.includes("/jsr:@")) {
+        return deno_stat("./not-existing");
+    } else {
+        return deno_stat(...args);
+    }
+};
+```
+
 ## License (LGPL-2.1-or-later)
 
 Copyright (C) 2024 Hans Schallmoser
