@@ -44,6 +44,9 @@ export function parse_jsr_specifier(specifier: string): JSRPackage | null {
     if (specifier.startsWith("jsr:")) {
         specifier = specifier.substring(4);
     }
+    if (specifier.startsWith("/")) {
+        specifier = specifier.replace("/@", "@");
+    }
     if (specifier.charAt(0) !== "@") {
         return null;
     }
