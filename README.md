@@ -204,6 +204,7 @@ setups Babel isn't really needed, see Usage wit Preact).
 ### PostCSS/TailwindCSS
 
 `tailwindcss` currently needs to be installed via NPM/Yarn, otherwise the PostCSS plugin loader is unable to find it.
+You could also use the Tailwind Play CDN during development.
 
 ## License (LGPL-2.1-or-later)
 
