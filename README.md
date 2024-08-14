@@ -2,6 +2,8 @@
 
 Native Vite support for Deno imports (jsr:, npm:, https://).
 
+Use the Deno for the frontend and enjoy development without the hassle of `node_modules`!
+
 ## Overview
 
 1. Enable Deno for the whole workspace or at least the frontend
@@ -12,7 +14,7 @@ Native Vite support for Deno imports (jsr:, npm:, https://).
 
 ## How does this work?
 
-This plugin effectively consists of a custom rollup loader that is injected at the earliest stage possible (even before
+This plugin consists of a custom rollup loader that is injected at the earliest stage possible (even before
 the builtin fs loader). It catches every import that:
 
 - starts with `jsr:`
@@ -26,7 +28,7 @@ the builtin fs loader). It catches every import that:
 
 All files are cached in a global cache file (one big SQLite DB). The cache location can be configured via
 `VITE_PLUGIN_DENO_CACHE`. All information about file integrity, resolved versions and HTTP redirects is stored in a
-separate lockfile (`vite.deno.lock` in the project dir). The plugin does not share lockfiles of cache with Deno.
+separate lockfile (`vite.deno.lock` in the project dir). The plugin does not share lockfiles or cache with Deno.
 
 [^1]: Although `remote:` does not work with Deno, vite-plugin-deno rewrites all `https://` imports to `remote:https://`
 in order to simplify internal handling.
@@ -62,6 +64,8 @@ duplicated preact, but in this case preact usually throws Errors like:
 only regarding to package resolution) please file an issue
 
 ## Usage
+
+[> Configuration options documentation](https://jsr.io/@deno-plc/vite-plugin-deno/doc/~/PluginDenoOptions)
 
 Currently only build script configurations are supported because `vite.config.ts` will always be run with Node :-(. It
 is not that complicated as it sounds, you just have to use the JS API of Vite
@@ -107,7 +111,7 @@ await build(config);
 
 ### `Deno.json`
 
-Sometimes you have to adjust `deno.json`
+Include the DOM in the TS compiler options
 
 ```json
 "compilerOptions": {
@@ -116,9 +120,10 @@ Sometimes you have to adjust `deno.json`
         "deno.ns",
         "ESNext",
         "DOM",
-        "DOM.Iterable"
+        "DOM.Iterable",
+        "webworker"
     ]
-},
+}
 ```
 
 ## Usage with React
@@ -152,14 +157,14 @@ export const config: InlineConfig = {
             },
         ],
     },
-    // HMR
     plugins: [
         await pluginDeno({
             allowed_undeclared_dependencies: ["@prefresh/core", "@prefresh/utils"], // injected HMR code
         }),
+        // HMR Plugin
         prefresh({
-            exclude: [/^npm:/, /registry.npmjs.org/], // see below
-        }) as Plugin, // HMR Plugin
+            exclude: [/^npm:/, /registry.npmjs.org/, /^jsr:/], // see below
+        }) as Plugin,
     ],
     // JSX transform
     esbuild: {
