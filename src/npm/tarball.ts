@@ -22,14 +22,13 @@
  */
 
 import { assert } from "@std/assert";
+import { Untar } from "@std/archive";
+import { readerFromStreamReader } from "@std/io";
+import { readAll } from "@std/io/read-all";
+
 import type { Opt } from "../options.ts";
 import { fetch_immutable } from "../storage/immutable.ts";
 import { getNPMMeta } from "./meta.ts";
-import { extract } from "tar-stream";
-// @deno-types="npm:@types/node@18.16.19"
-import { createGunzip } from "node:zlib";
-// @deno-types="npm:@types/node@18.16.19"
-import { Buffer } from "node:buffer";
 import { set_blob } from "../storage/blobfs.ts";
 import { db } from "../storage/db.ts";
 
@@ -55,48 +54,32 @@ export async function ensureTarball(o: Opt, packageName: string, version: string
 }
 
 async function loadTarball(o: Opt, packageName: string, version: string) {
+    console.log(`[NPM] download ${packageName}@${version}`);
     const meta = await getNPMMeta(o, packageName);
     const versionMeta = meta.versions[version];
     if (!versionMeta) {
         throw new Error(`could not load version meta for ${packageName}@${version}`);
     }
     const url = new URL(versionMeta?.dist?.tarball);
-    const tgz = await fetch_immutable({
+    const tgz_file = await fetch_immutable({
         url,
         lockfileID: `npm:${packageName}@${version}~tarball`,
     });
 
-    assert(tgz);
+    assert(tgz_file);
 
-    const tar = extract();
+    const tgz = ReadableStream.from([tgz_file]);
 
-    tar.on("entry", (header: { name: string }, stream: NodeJS.ReadableStream, cb: () => void) => {
-        const path = header.name.substring("package/".length);
-        // console.log(header.name);
-        const data: Buffer[] = [];
-        stream.on("data", (chunk: Buffer) => {
-            data.push(chunk);
-        });
+    const tr = tgz.pipeThrough(new DecompressionStream("gzip"));
 
-        stream.on("end", async () => {
-            const content = new Uint8Array(Buffer.concat(data).buffer);
-            const entry = await set_blob(content);
-            db.sql`INSERT OR IGNORE INTO npm_tar(package,version,file,blob_ref) VALUES (${packageName}, ${version}, ${path}, ${entry.digest.sha512})`;
-            cb();
-        });
+    const archive = new Untar(readerFromStreamReader(tr.getReader()));
 
-        stream.resume();
-    });
+    for await (const entry of archive) {
+        const path = entry.fileName.substring("package/".length);
+        console.log(`[NPM] unpack ${packageName}@${version}/${path}`);
 
-    const gz = createGunzip();
-
-    gz.pipe(tar);
-
-    gz.write(tgz);
-
-    await new Promise<void>((res) => {
-        tar.on("finish", () => {
-            res();
-        });
-    });
+        const data = await readAll(entry);
+        const blob = await set_blob(data);
+        db.sql`INSERT OR IGNORE INTO npm_tar(package,version,file,blob_ref) VALUES (${packageName}, ${version}, ${path}, ${blob.digest.sha512})`;
+    }
 }

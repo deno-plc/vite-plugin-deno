@@ -14,8 +14,8 @@ Use the Deno for the frontend and enjoy development without the hassle of `node_
 
 ## How does this work?
 
-This plugin consists of a custom rollup loader that is injected at the earliest stage possible (even before
-the builtin fs loader). It catches every import that:
+This plugin consists of a custom rollup loader that is injected at the earliest stage possible (even before the builtin
+fs loader). It catches every import that:
 
 - starts with `jsr:`
 - starts with `npm:`

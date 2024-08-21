@@ -4,24 +4,30 @@
     "specifiers": {
       "jsr:@db/sqlite@^0.11.1": "jsr:@db/sqlite@0.11.1",
       "jsr:@denosaurs/plug@1": "jsr:@denosaurs/plug@1.0.6",
+      "jsr:@std/archive@^0.225.0": "jsr:@std/archive@0.225.0",
       "jsr:@std/assert@^0.217.0": "jsr:@std/assert@0.217.0",
       "jsr:@std/assert@^0.221.0": "jsr:@std/assert@0.221.0",
       "jsr:@std/assert@^0.223.0": "jsr:@std/assert@0.223.0",
       "jsr:@std/assert@^0.225.2": "jsr:@std/assert@0.225.3",
+      "jsr:@std/bytes@^1.0.2-rc.3": "jsr:@std/bytes@1.0.2",
       "jsr:@std/encoding@^0.221.0": "jsr:@std/encoding@0.221.0",
       "jsr:@std/encoding@^0.223.0": "jsr:@std/encoding@0.223.0",
       "jsr:@std/fmt@^0.221.0": "jsr:@std/fmt@0.221.0",
       "jsr:@std/fmt@^0.223.0": "jsr:@std/fmt@0.223.0",
       "jsr:@std/fs@^0.221.0": "jsr:@std/fs@0.221.0",
       "jsr:@std/fs@^0.223.0": "jsr:@std/fs@0.223.0",
+      "jsr:@std/io@^0.224.4": "jsr:@std/io@0.224.5",
+      "jsr:@std/io@^0.224.5": "jsr:@std/io@0.224.5",
       "jsr:@std/path@0.217": "jsr:@std/path@0.217.0",
       "jsr:@std/path@^0.221.0": "jsr:@std/path@0.221.0",
       "jsr:@std/path@^0.223.0": "jsr:@std/path@0.223.0",
       "jsr:@std/path@^0.225.1": "jsr:@std/path@0.225.1",
       "jsr:@std/testing@^0.223.0": "jsr:@std/testing@0.223.0",
       "npm:@types/json-stable-stringify": "npm:@types/json-stable-stringify@1.0.36",
+      "npm:@types/json-stable-stringify@1.0.36": "npm:@types/json-stable-stringify@1.0.36",
       "npm:@types/lodash-es": "npm:@types/lodash-es@4.17.12",
       "npm:@types/node": "npm:@types/node@18.16.19",
+      "npm:@types/node@18.16.19": "npm:@types/node@18.16.19",
       "npm:@types/semver": "npm:@types/semver@7.5.8",
       "npm:@types/tar-stream": "npm:@types/tar-stream@3.1.3",
       "npm:json-stable-stringify@^1.1.1": "npm:json-stable-stringify@1.1.1",
@@ -29,8 +35,6 @@
       "npm:lodash-es@^4.17.21": "npm:lodash-es@4.17.21",
       "npm:semver": "npm:semver@7.6.0",
       "npm:semver@^7.6.0": "npm:semver@7.6.0",
-      "npm:tar-stream": "npm:tar-stream@3.1.7",
-      "npm:tar-stream@^3.1.7": "npm:tar-stream@3.1.7",
       "npm:validate-npm-package-name": "npm:validate-npm-package-name@5.0.1",
       "npm:validate-npm-package-name@^5.0.1": "npm:validate-npm-package-name@5.0.1",
       "npm:vite": "npm:vite@5.2.9",
@@ -56,6 +60,12 @@
           "jsr:@std/path@^0.221.0"
         ]
       },
+      "@std/archive@0.225.0": {
+        "integrity": "cacdf278ee1c8cd89e67917bd0588c5eab16ef21b0e884c721bd0eef5179cf6f",
+        "dependencies": [
+          "jsr:@std/io@^0.224.4"
+        ]
+      },
       "@std/assert@0.217.0": {
         "integrity": "c98e279362ca6982d5285c3b89517b757c1e3477ee9f14eb2fdf80a45aaa9642"
       },
@@ -70,6 +80,9 @@
       },
       "@std/assert@0.225.3": {
         "integrity": "b3c2847aecf6955b50644cdb9cf072004ea3d1998dd7579fc0acb99dbb23bd4f"
+      },
+      "@std/bytes@1.0.2": {
+        "integrity": "fbdee322bbd8c599a6af186a1603b3355e59a5fb1baa139f8f4c3c9a1b3e3d57"
       },
       "@std/encoding@0.221.0": {
         "integrity": "d1dd76ef0dc5d14088411e6dc1dede53bf8308c95d1537df1214c97137208e45"
@@ -97,6 +110,12 @@
           "jsr:@std/path@^0.223.0"
         ]
       },
+      "@std/io@0.224.5": {
+        "integrity": "cb84fe655d1273fca94efcff411465027a8b0b4225203f19d6ee98d9c8920a2d",
+        "dependencies": [
+          "jsr:@std/bytes@^1.0.2-rc.3"
+        ]
+      },
       "@std/path@0.217.0": {
         "integrity": "1217cc25534bca9a2f672d7fe7c6f356e4027df400c0e85c0ef3e4343bc67d11",
         "dependencies": [
@@ -110,7 +129,10 @@
         ]
       },
       "@std/path@0.223.0": {
-        "integrity": "593963402d7e6597f5a6e620931661053572c982fc014000459edc1f93cc3989"
+        "integrity": "593963402d7e6597f5a6e620931661053572c982fc014000459edc1f93cc3989",
+        "dependencies": [
+          "jsr:@std/assert@^0.223.0"
+        ]
       },
       "@std/path@0.225.1": {
         "integrity": "8c3220635a73730eb51fe43de9e10b79e2724a5bb8638b9355d35ae012fd9429",
@@ -769,16 +791,8 @@
           "color-convert": "color-convert@1.9.3"
         }
       },
-      "b4a@1.6.6": {
-        "integrity": "sha512-5Tk1HLk6b6ctmjIkAcU/Ujv/1WqiDl0F0JdRCR80VsOcUlHcu7pWeWRlOqQLHfDEsVx9YH/aif5AG4ehoCtTmg==",
-        "dependencies": {}
-      },
       "balanced-match@1.0.2": {
         "integrity": "sha512-3oSeUO0TMV67hN1AmbXsK4yaqU7tjiHlbxRDZOpH0KW9+CeX4bRAaX0Anxt0tx2MrpRpWwQaPwIlISEJhYU5Pw==",
-        "dependencies": {}
-      },
-      "bare-events@2.2.2": {
-        "integrity": "sha512-h7z00dWdG0PYOQEvChhOSWvOfkIKsdZGkWr083FgN/HyoQuebSew/cgirYqh9SCuy/hRvxc5Vy6Fw8xAmYHLkQ==",
         "dependencies": {}
       },
       "brace-expansion@1.1.11": {
@@ -981,10 +995,6 @@
       },
       "event-target-shim@5.0.1": {
         "integrity": "sha512-i/2XbnSz/uxRCU6+NdVJgKWDTM427+MqYbkQzD321DuCQJUqOuJKIA0IM2+W2xtYHdKOmZ4dR6fExsd4SXL+WQ==",
-        "dependencies": {}
-      },
-      "fast-fifo@1.3.2": {
-        "integrity": "sha512-/d9sfos4yxzpwkDkuN7k2SqFKtYNmCTzgfEpz82x34IM9/zc8KGxQoXg1liNC/izpRM/MBdt44Nmx41ZWqk+FQ==",
         "dependencies": {}
       },
       "fs-minipass@2.1.0": {
@@ -1357,10 +1367,6 @@
           "retry": "retry@0.12.0"
         }
       },
-      "queue-tick@1.0.1": {
-        "integrity": "sha512-kJt5qhMxoszgU/62PLP1CJytzd2NKetjSRnyuj31fDd3Rlcz3fzlFdFLD1SItunPwyqEOkca6GbV612BWfaBag==",
-        "dependencies": {}
-      },
       "resolve@1.22.8": {
         "integrity": "sha512-oKWePCxqpd6FlLvGV1VU0x7bkPmmCNolxzjMf4NczoDnQcIWrAF+cPtZn5i6n+RfD2d9i0tzpKnG6Yk168yIyw==",
         "dependencies": {
@@ -1472,14 +1478,6 @@
           "minipass": "minipass@3.3.6"
         }
       },
-      "streamx@2.16.1": {
-        "integrity": "sha512-m9QYj6WygWyWa3H1YY69amr4nVgy61xfjys7xO7kviL5rfIEc2naf+ewFiOA+aEJD7y0JO3h2GoiUv4TDwEGzQ==",
-        "dependencies": {
-          "bare-events": "bare-events@2.2.2",
-          "fast-fifo": "fast-fifo@1.3.2",
-          "queue-tick": "queue-tick@1.0.1"
-        }
-      },
       "supports-color@5.5.0": {
         "integrity": "sha512-QjVjwdXIt408MIiAqCX4oUKsgU2EqAGzs2Ppkm4aQYbjm+ZEWEcW4SfFNTr4uMNZma0ey4f5lgLrkB0aX0QMow==",
         "dependencies": {
@@ -1494,14 +1492,6 @@
         "integrity": "sha512-71o1zfzyawLfIWBOmw8brleKyvnbn73oVHNCsu51uPMz/HWiKkkXsI31JjHW5zqXEqnPYkIiHd8ZmL7FCimLEA==",
         "dependencies": {
           "semver": "semver@6.3.1"
-        }
-      },
-      "tar-stream@3.1.7": {
-        "integrity": "sha512-qJj60CXt7IU1Ffyc3NJMjh6EkuCFej46zUqJ4J7pqYlThyd9bO0XBTmcOIhSzZJVWfsLks0+nle/j538YAW9RQ==",
-        "dependencies": {
-          "b4a": "b4a@1.6.6",
-          "fast-fifo": "fast-fifo@1.3.2",
-          "streamx": "streamx@2.16.1"
         }
       },
       "tar@6.2.1": {
@@ -1608,14 +1598,15 @@
   "workspace": {
     "dependencies": [
       "jsr:@db/sqlite@^0.11.1",
+      "jsr:@std/archive@^0.225.0",
       "jsr:@std/assert@^0.223.0",
       "jsr:@std/encoding@^0.223.0",
       "jsr:@std/fs@^0.223.0",
+      "jsr:@std/io@^0.224.5",
       "jsr:@std/path@^0.225.1",
       "jsr:@std/testing@^0.223.0",
       "npm:json-stable-stringify@^1.1.1",
       "npm:semver@^7.6.0",
-      "npm:tar-stream@^3.1.7",
       "npm:validate-npm-package-name@^5.0.1",
       "npm:vite@^5.2.12",
       "npm:zod@^3.22.5"
