@@ -21,15 +21,33 @@
  * USA or see <https://www.gnu.org/licenses/>.
  */
 
+import { parse, type SemVer } from "@std/semver";
 import validate from "validate-npm-package-name";
+import type { FastBrand } from "@coderspirit/nominal";
 
-export interface NPM {
+export type ModuleSpecifier = FastBrand<URL, "ModuleSpecifier">;
+
+export function parseModuleSpecifier(inp: string | URL): ModuleSpecifier {
+    const url = new URL(inp);
+    if (url.href.includes("\\")) {
+        return parseModuleSpecifier(url.href.replaceAll("\\", "/"));
+    }
+    if (url.protocol === "https:") {
+        return url as ModuleSpecifier;
+    } else if (url.pathname.startsWith("/")) {
+        return new URL(url.href.replace(url.pathname, url.pathname.substring(1))) as ModuleSpecifier;
+    } else {
+        return url as ModuleSpecifier;
+    }
+}
+
+export interface NPMExact {
     name: string;
-    version: string | null;
+    version: SemVer;
     path: string;
 }
 
-export function parseNPM(spec: string): NPM | null {
+export function parseNPMExact(spec: string): NPMExact | null {
     spec = spec.trim();
     if (spec.startsWith("npm:")) {
         spec = spec.substring(4);
@@ -50,12 +68,14 @@ export function parseNPM(spec: string): NPM | null {
         return null;
     }
 
-    let version = null;
+    let version: SemVer | null = null;
     let name = spec.substring(0, marker);
 
     if (version_marker !== -1) {
-        version = spec.substring(version_marker + 1, marker);
+        version = parse(spec.substring(version_marker + 1, marker));
         name = spec.substring(0, version_marker);
+    } else {
+        return null;
     }
 
     const path = spec.substring(marker + 1);
@@ -66,6 +86,40 @@ export function parseNPM(spec: string): NPM | null {
 
     return {
         version,
+        name,
+        path,
+    };
+}
+
+export interface NPMImport {
+    name: string;
+    path: string;
+}
+
+export function parseNPMImport(spec: string): NPMImport | null {
+    spec = spec.trim();
+    if (spec.startsWith("npm:")) {
+        spec = spec.substring(4);
+    }
+    let marker = 0;
+    marker = spec.indexOf("/");
+    if (spec[0] === "@") {
+        // @scope/package contains one more slash
+        marker = spec.indexOf("/", marker + 1);
+    }
+    if (marker === -1) {
+        marker = Infinity;
+    }
+
+    const name = spec.substring(0, marker);
+
+    const path = spec.substring(marker + 1);
+
+    if (!validate(name)) {
+        return null;
+    }
+
+    return {
         name,
         path,
     };

@@ -21,28 +21,10 @@
  * USA or see <https://www.gnu.org/licenses/>.
  */
 
-/**
- * Load import maps (only basic imports field supported, no includes from other files)
- * @param path path to import map file
- */
-export async function readImportMap(path: string): Promise<ImportMap> {
-    const content = JSON.parse(await Deno.readTextFile(path));
-    const map = new Map<string, string>();
-    if (content.imports && typeof content.imports === "object") {
-        for (const replacedImport in content.imports) {
-            map.set(replacedImport, String(content.imports[replacedImport]));
-        }
-    }
-    return {
-        lookup(id) {
-            return map.get(id) ?? null;
-        },
-    };
-}
+import { assertEquals } from "@std/assert";
+import { parseModuleSpecifier } from "./specifier.ts";
 
-/**
- * Parsed import map
- */
-export interface ImportMap {
-    lookup(id: string): string | null;
-}
+Deno.test("parseModuleSpecifier", () => {
+    assertEquals(parseModuleSpecifier(`npm:foo`).href, `npm:foo`);
+    assertEquals(parseModuleSpecifier(`npm:/foo`).href, `npm:foo`);
+});

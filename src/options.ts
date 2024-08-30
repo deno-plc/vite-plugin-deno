@@ -21,13 +21,10 @@
  * USA or see <https://www.gnu.org/licenses/>.
  */
 
-import type { ImportMap } from "./utils/importMap.ts";
-
 export interface Opt {
-    force_online: boolean;
-    cdn_imports: string[];
-    importMap: ImportMap;
-    importMapPath: string;
-    nodePolyfills: Map<string, string>;
-    undeclared_dependencies: string[];
+    deno_json?: string;
+    deno_lock?: string;
+    extra_import_map: Map<string, string>;
+    environment: "deno" | "browser";
+    exclude: (string | RegExp)[];
 }

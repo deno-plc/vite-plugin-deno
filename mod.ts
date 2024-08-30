@@ -22,42 +22,35 @@
  */
 
 import type { Plugin } from "vite";
-import { fetch_jsr_file, parse_jsr_specifier } from "./src/jsr.ts";
-import { dirname } from "jsr:@std/path@0.217";
-import { resolveWithImportMap } from "./src/importmap.ts";
 import type { Opt } from "./src/options.ts";
-import { fetch_immutable } from "./src/storage/immutable.ts";
-import { assert } from "@std/assert";
-import { parseNPM } from "./src/npm/specifier.ts";
-import { loadNPMFile } from "./src/npm/loader.ts";
-import { join } from "@std/path";
-import { readImportMap } from "./src/utils/importMap.ts";
+import { ModuleGraph } from "./src/graph.ts";
+import { join, toFileUrl } from "@std/path";
+import { decodeSpec, encodeSpec, resolve } from "./src/resolve.ts";
 
 /**
  * Plugin configuration
  */
 export interface PluginDenoOptions {
     /**
-     * Path to deno.json, defaults to ./deno.json
+     * override path to deno.json
      */
     deno_json?: string;
+
     /**
-     * list of node builtin modules and their polyfills.
-     * Default: buffer => npm:buffer
+     * override path to deno.lock
      */
-    nodePolyfills?: [string, string][] | Map<string, string>;
+    deno_lock?: string;
+
     /**
-     * Plugin-Deno uses the local cache first for information about package versions, etc...
+     * import map that is only applied to vite resolution. Useful for polyfilling `node:`
      */
-    force_online?: boolean;
+    extra_import_map?: [string, string][] | Map<string, string>;
+
     /**
-     * These network imports wont be resolved
+     * environment (controls the NPM entrypoint, node:, ...)
      */
-    cdn_imports?: string[];
-    /**
-     * allowed undeclared dependencies (eg. injected hmr)
-     */
-    allowed_undeclared_dependencies?: string[];
+    env: "deno" | "browser";
+
     /**
      * imports that are handled by other plugins
      */
@@ -65,104 +58,105 @@ export interface PluginDenoOptions {
 }
 
 /**
- * plugin
+ * pluginDeno
  */
-export async function pluginDeno(options: PluginDenoOptions = {}): Promise<Plugin> {
-    const importMap = await readImportMap(options.deno_json || "./deno.json");
-    const nodePolyfills = new Map(options.nodePolyfills || [["buffer", "npm:buffer"]]);
+export function pluginDeno(options: PluginDenoOptions): Plugin {
+    const extra_import_map = new Map(options.extra_import_map || [["buffer", "npm:buffer"]]);
     const o: Opt = {
-        importMap,
-        importMapPath: options.deno_json || "./deno.json",
-        force_online: options.force_online || false,
-        cdn_imports: options.cdn_imports || [],
-        nodePolyfills,
-        undeclared_dependencies: options.allowed_undeclared_dependencies || [],
+        deno_json: options.deno_json,
+        deno_lock: options.deno_lock,
+        extra_import_map,
+        environment: options.env,
+        exclude: [...options.exclude || []],
     };
+    if (o.environment === "deno") {
+        o.exclude.push(/^node:/);
+    }
+    const graph = new ModuleGraph(o);
     return {
         name: "vite-plugin-deno",
         enforce: "pre",
         resolveId: {
             order: "pre",
-            async handler(id, importer) {
-                if (options.exclude) {
-                    for (const exclude of options.exclude) {
-                        if (id === exclude || (exclude instanceof RegExp && exclude.test(id))) {
+            async handler(id, referrer) {
+                // console.log(`%c[HANDLE]         ${id}`, "color:orange");
+                // console.log(`%c            from ${referrer}`, "color:orange");
+                id = decodeSpec(id);
+                referrer = referrer && decodeSpec(referrer);
+
+                if (id.startsWith("/@fs")) {
+                    return null;
+                }
+                if (id.startsWith("/@id")) {
+                    return null;
+                }
+                if (id.startsWith("/@vite/")) {
+                    return null;
+                }
+                if (id.startsWith("@vite/")) {
+                    return null;
+                }
+
+                for (const exclude of o.exclude) {
+                    if (exclude instanceof RegExp) {
+                        if (exclude.test(id)) {
+                            return null;
+                        }
+                        if (referrer && exclude.test(referrer)) {
                             return null;
                         }
                     }
-                }
-                /**
-                 * [issue] [flaky] Sometimes vite tries to resolve ids that contain '[object Promise]' which indicates that as Promise has been casted to string.
-                 */
-                if (id.includes("[object Promise]")) {
-                    throw new Error(`[Plugin-Deno] cannot resolve invalid id: ${id}`);
+                    if (exclude === id || exclude === referrer) {
+                        return null;
+                    }
                 }
 
-                const resolved = await resolveWithImportMap(o, id, importer);
-
-                /**
-                 * Make sure '[object Promise]' ids don't originate in plugin-deno
-                 */
-                if (resolved?.includes("[object Promise]")) {
-                    throw new Error(`[Plugin-Deno] resolved to invalid: ${id}`);
+                if (referrer) {
+                    try {
+                        await Deno.stat(`${referrer}`);
+                        referrer = toFileUrl(referrer).href;
+                    } catch (_err) {
+                        //
+                    }
+                } else {
+                    try {
+                        await Deno.stat(`./${id}`);
+                        id = toFileUrl(join(Deno.cwd(), id)).href;
+                    } catch (_err) {
+                        //
+                    }
                 }
-                return resolved;
+
+                if (id.startsWith("/")) {
+                    try {
+                        await Deno.stat(`.${id}`);
+                    } catch (_err) {
+                        // console.log(`%c[NOT EXISTING]   ${id}`, "color:red");
+                        return null;
+                    }
+                    id = toFileUrl(`${Deno.cwd()}${id}`).href;
+                }
+
+                // console.log(`%c[RESOLVING]      ${id}`, "color:#f0a");
+                // console.log(`%c            from ${referrer}`, "color:#f0a");
+
+                const resolved = await resolve(o, graph, id, referrer);
+
+                return encodeSpec(resolved);
             },
         },
         async load(id) {
-            /**
-             * https://
-             */
-            if (id.startsWith("remote:")) {
-                id = id.replace(/https\:\/(?=[a-z])/, "https://");
-                const url = id.substring(7);
-                const content = await fetch_immutable({
-                    url,
-                    lockfileID: id,
-                });
-                assert(content);
-                return new TextDecoder()
-                    .decode(content)
-                    .replace(`//# sourceMappingURL=`, `//# sourceMappingURL=${dirname(url)}/`);
+            id = decodeSpec(id);
+            // console.log(`%c[LOADING]        ${id}`, "color:green");
+
+            const mod = graph.get_resolved(id);
+
+            if (!mod) {
+                // console.log(`%c[NOT RESOLVED]   ${id}`, "color: red");
+                return;
             }
 
-            if (id.startsWith("jsr:")) {
-                const p = parse_jsr_specifier(id)!;
-                const code = await fetch_jsr_file(p);
-                return {
-                    code,
-                    map: null,
-                };
-            }
-
-            if (id.startsWith("npm:")) {
-                const p = parseNPM(id)!;
-                const code = new TextDecoder().decode(await loadNPMFile(o, p));
-                // load source maps (otherwise the paths would point to invalid urls)
-                // Additionally vite disallows loading of paths that have not been previously imported
-                const mappingStart = code.indexOf("//# sourceMappingURL=");
-                let map: undefined | string = undefined;
-                if (mappingStart !== -1) {
-                    const mappingURL = code.substring(mappingStart + "//# sourceMappingURL=".length).split("\n")[0]!
-                        .trim();
-                    // data urls don't depend on path anyway
-                    if (!mappingURL.startsWith("data:")) {
-                        const path = join(dirname(p.path), mappingURL).replaceAll("\\", "/");
-                        map = new TextDecoder().decode(
-                            await loadNPMFile(o, {
-                                name: p.name,
-                                version: p.version,
-                                path,
-                            }),
-                        );
-                    }
-                }
-                return {
-                    // remove old source map import
-                    code: code.replace(/\/\/# sourceMappingURL=.+/, ""),
-                    map,
-                };
-            }
+            return await mod.load();
         },
     };
 }

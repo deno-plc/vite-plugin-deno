@@ -21,163 +21,72 @@
  * USA or see <https://www.gnu.org/licenses/>.
  */
 
-import { dirname, join } from "@std/path";
-import { parse_jsr_specifier, resolveJSR } from "./jsr.ts";
+import { fromFileUrl } from "@std/path";
+import type { ModuleGraph } from "./graph.ts";
+import { type ModuleSpecifier, parseModuleSpecifier, parseNPMImport } from "./specifier.ts";
 import type { Opt } from "./options.ts";
-import { builtinModules } from "node:module";
-import { parseNPM } from "./npm/specifier.ts";
-import { resolveNPMVersion } from "./npm/registry.ts";
-import { getNPMMeta } from "./npm/meta.ts";
-import { assert } from "@std/assert";
-import { satisfies, valid } from "semver";
-import { resolveNPMExport } from "./npm/resolve.ts";
 
-export async function resolveImport(o: Opt, id: string, importer?: string) {
-    if (id.match(/^https?:\//)) {
-        const url = new URL(id);
-        if (o.cdn_imports.includes(url.href)) {
-            return null;
-        }
-        return `remote:${url.href}`;
+export async function resolve(o: Opt, graph: ModuleGraph, id: string, referrer?: string, may_fetch: boolean = true) {
+    if (o.extra_import_map.has(id)) {
+        return await resolve(o, graph, o.extra_import_map.get(id)!, referrer, may_fetch);
     }
 
-    if (id.startsWith("remote:")) {
-        return id;
-    }
+    const referrer_mod = graph.get_resolved(referrer!);
 
-    if (builtinModules.includes(id)) {
-        if (o.nodePolyfills.has(id)) {
-            const polyfill = o.nodePolyfills.get(id);
-            if (!polyfill || polyfill === id) {
-                throw new Error(`invalid node polyfill`);
-            }
-            return await resolveImport(o, polyfill);
-        }
-    }
-    if (id.startsWith("node:")) {
-        if (o.nodePolyfills.has(id.substring(5))) {
-            return await resolveImport(o, o.nodePolyfills.get(id.substring(5))!);
-        } else {
-            throw new Error(`${id} could not be polyfilled, add to config (pluginDeno({nodePolyfills: [...]}))`);
-        }
-    }
-
-    if (id.startsWith("jsr:")) {
-        const specifier = parse_jsr_specifier(id);
-        if (!specifier) {
-            console.warn(`invalid ${id}`);
-            return;
-        }
-        return await resolveJSR(specifier);
-    }
-
-    if (id.startsWith("npm:")) {
-        const p = parseNPM(id);
-        const importerSpecifier = importer?.startsWith("npm:") ? parseNPM(importer) : null;
-        if (!p) {
-            console.warn(`invalid ${id}`);
-            return;
-        }
-
-        let version = p.version || "";
-
-        if (importerSpecifier) {
-            const parentMeta = await getNPMMeta(o, importerSpecifier.name);
-
-            const parentPackage = parentMeta.versions[importerSpecifier.version!];
-
-            assert(parentPackage);
-
-            const dependencyVersion = (parentPackage.dependencies || {})[p.name];
-            const peerDependencyVersion = (parentPackage.peerDependencies || {})[p.name];
-
-            if (dependencyVersion) {
-                assert(
-                    valid(dependencyVersion),
-                    `malformed dependency '${p.name}@${dependencyVersion}' of ${importer}`,
-                );
-                version = dependencyVersion;
-            } else if (peerDependencyVersion) {
-                assert(
-                    valid(peerDependencyVersion),
-                    `malformed peer dependency '${p.name}@${peerDependencyVersion}' of ${importer}`,
-                );
-                assert(
-                    satisfies(await resolveNPMVersion(o, p.name, version) || "", peerDependencyVersion),
-                    `unmet peer dependency`,
-                );
-            } else if (o.undeclared_dependencies.includes(p.name)) {
-                // do nothing
+    if (referrer_mod) {
+        // console.log(`%c[REFERRER]       ${referrer_mod.specifier.href}`, "color: gray");
+        const ref = await referrer_mod.resolve_import(id);
+        if (ref) {
+            // console.log(`%c[RESOLVED]       ${ref.specifier.href}`, "color:#ff0");
+            return ref.specifier;
+        } else if (!id.startsWith("npm")) {
+            if (may_fetch) {
+                await graph.update_info(referrer_mod.specifier);
+                return await resolve(o, graph, id, referrer, false);
             } else {
-                throw new Error(
-                    `cannot load undeclared dependency ${id} from ${importer}. Add '${p.name}' to \`allowed_undeclared_dependencies\` to bypass this for injected HMR packages`,
-                );
+                throw new Error(`cannot resolve '${id}' from ${referrer_mod.specifier.href}`);
             }
         }
-        const resolvedVersion = await resolveNPMVersion(o, p.name, version);
+    }
 
-        assert(resolvedVersion);
+    if (URL.canParse(id)) {
+        const mod = await graph.get_module(parseModuleSpecifier(id));
 
-        const meta = await getNPMMeta(o, p.name);
+        // console.log(`%c[RESOLVED ENTRY] ${mod.specifier.href}`, "color:blue");
 
-        const versionMeta = meta.versions[resolvedVersion];
-
-        assert(versionMeta);
-
-        let file = p.path;
-
-        const exportSearch = p.path ? `./${p.path}` : ".";
-
-        const exportEntry = versionMeta.exports?.[exportSearch];
-
-        if (exportEntry) {
-            const resolved = resolveNPMExport(exportEntry);
-            if (resolved) {
-                file = resolved;
-            } else {
-                throw new Error(`could not resolve export '${id}' from '${importer}'`);
+        return mod.specifier;
+    } else {
+        const maybe_npm = parseNPMImport(id);
+        if (maybe_npm) {
+            if (graph.npm_package_versions.has(maybe_npm.name)) {
+                const versions = graph.npm_package_versions.get(maybe_npm.name)!;
+                throw new Error(`cannot resolve ${id} from ${referrer}
+${maybe_npm.name} has been recognized as an NPM package, if it is an injected import you may want to add one of the following entries to extra_import_map:
+${
+                    [...versions.values()].map((version) =>
+                        `"${id}" => "npm:${maybe_npm.name}@${version}${maybe_npm.path ? `/${maybe_npm.path}` : ""}"`
+                    ).join("\n")
+                }`);
             }
-        } else if (p.path === "") {
-            file = versionMeta.main;
         }
-
-        file = file.replace(/^\.\//, "");
-
-        // console.log(`${id} => ${file}`);
-        return `npm:${p.name}@${resolvedVersion}/${file}`;
-        // return await resolveJSR(specifier);
+        throw new Error(`cannot resolve ${id} from ${referrer}`);
     }
+}
 
-    if (importer?.startsWith("jsr:")) {
-        const importSpec = parse_jsr_specifier(importer);
-        if (importSpec) {
-            const path = join(dirname(importSpec.path), id).replaceAll("\\", "/");
-            return await resolveJSR({
-                ...importSpec,
-                path: path,
-            });
-        }
-    }
+const fs_remap = new Map<string, ModuleSpecifier>();
 
-    if (importer?.startsWith("npm:")) {
-        const importSpec = parseNPM(importer);
-        if (importSpec) {
-            const path = join(dirname(importSpec.path), id).replaceAll("\\", "/");
-            // console.log(`%c${importer} imports ${id} (>${path})`, "color: cyan");
-            return `npm:${importSpec.name}@${importSpec.version}/${path}`;
-        }
+export function encodeSpec(spec: ModuleSpecifier) {
+    if (spec.protocol === "file:") {
+        const path = fromFileUrl(spec.href);
+        fs_remap.set(path, spec);
+        return path;
     }
+    return `${encodeURIComponent(spec.href)}`;
+}
 
-    if (importer?.startsWith("remote:")) {
-        const url = new URL(importer.substring(7));
-        url.hash = "";
-        url.search = "";
-        if (id.startsWith("/")) {
-            url.pathname = id.substring(1);
-            return `remote:${url.href}`;
-        } else if (id.startsWith("./")) {
-            url.pathname = join(dirname(url.pathname), id).replaceAll("\\", "/");
-            return `remote:${url.href}`;
-        }
+export function decodeSpec(spec: string) {
+    if (fs_remap.has(spec)) {
+        return fs_remap.get(spec)!.href;
     }
+    return decodeURIComponent(spec);
 }
