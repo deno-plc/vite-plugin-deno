@@ -63,8 +63,8 @@ Read more about [package.json compatibility](https://deno.com/blog/v1.31#package
 
 If you have installed a dependency locally you can
 [`exclude`](https://jsr.io/@deno-plc/vite-plugin-deno/doc/~/PluginDenoOptions.exclude) it and reenable the Vite module
-resolution. This might be required for dependencies with **many** files. This plugin currently does no pre-bundling, so
-every file is loaded individually, in case of `lodash-es` this results in ~650 HTTP requests.
+resolution. This might be required for dependencies with _**many**_ files. This plugin currently does no pre-bundling,
+so every file is loaded individually, in case of `lodash-es` this results in ~650 HTTP requests.
 
 ## Usage
 
@@ -178,8 +178,8 @@ Although `@preact/preset-vite` works when the respective Babel plugins are insta
 With a few lines of configuration you can set up prefresh (the Preact HMR Engine) and use ESBuild for JSX
 transformation.
 
-By the way: ESBuild is many times faster than Babel and used by Vite to pre-process all files anyway (even if they are
-handled by Babel)
+By the way: ESBuild is many times faster than Babel and used by Vite to pre-process all files anyway (even if they were
+already handled by Babel)
 
 Just update your Vite config:
 
@@ -246,19 +246,19 @@ The classic `vite.config.ts` file would be executed using Node.js instead of Den
 ### Dependency optimization
 
 Unsupported because dependency optimization relies on `node_modules`. If you really need it (lodash), see
-[But I need this one package to be in `node_modules`](#but-i-need-this-one-package-to-be-in-node_modules)
+[`node_modules` section](#but-i-need-this-one-package-to-be-in-node_modules)
 
 ### Babel
 
 Some other plugins require Babel and Babel plugins. The Babel plugin loader depends on `node_modules`, see
-[But I need this one package to be in `node_modules`](#but-i-need-this-one-package-to-be-in-node_modules). In order to
-get the best DX possible, you should avoid Babel based plugins (for most setups Babel isn't really needed, see Usage wit
-Preact. Using builtin esbuild is usually way faster).
+[`node_modules` section](#but-i-need-this-one-package-to-be-in-node_modules). In order to get the best DX possible, you
+should avoid Babel based plugins (for most setups Babel isn't really needed, see Usage wit Preact. Using builtin esbuild
+is usually way faster).
 
 ### PostCSS/TailwindCSS
 
 `tailwindcss` currently needs to be installed in `node_modules`, see
-[But I need this one package to be in `node_modules`](#but-i-need-this-one-package-to-be-in-node_modules)
+[`node_modules` section](#but-i-need-this-one-package-to-be-in-node_modules)
 
 The recommended way is to use Tailwind Play CDN during development and Tailwind CLI for release build.
 
