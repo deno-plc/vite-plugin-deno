@@ -95,6 +95,17 @@ export function pluginDeno(options: PluginDenoOptions): Plugin {
     return {
         name: "vite-plugin-deno",
         enforce: "pre",
+        config() {
+            if (o.environment === "deno") {
+                return {
+                    build: {
+                        rollupOptions: {
+                            external: [/^node:/],
+                        },
+                    },
+                };
+            }
+        },
         resolveId: {
             order: "pre",
             async handler(id, referrer) {
