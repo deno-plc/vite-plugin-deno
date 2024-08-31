@@ -26,6 +26,7 @@ import type { Opt } from "./src/options.ts";
 import { ModuleGraph } from "./src/graph.ts";
 import { join, toFileUrl } from "@std/path";
 import { decodeSpec, encodeSpec, resolve } from "./src/resolve.ts";
+import { resolve_undeclared_npm } from "./src/undeclared_npm.ts";
 
 /**
  * Plugin configuration
@@ -42,17 +43,26 @@ export interface PluginDenoOptions {
     deno_lock?: string;
 
     /**
-     * import map that is only applied to vite resolution. Useful for polyfilling `node:`
+     * bundling context
+     * 1. Controls the Node module resolution conditions (when set to `"browser"` the package.json `browser` entry is preferred over `main`)
+     * 2. `node:` imports are only allowed when set to `"deno"`
      */
-    extra_import_map?: [string, string][] | Map<string, string>;
+    env?: "deno" | "browser";
 
     /**
-     * environment (controls the NPM entrypoint, node:, ...)
+     * Those NPM packages will always be allowed even if they are not included in Deno's module graph
      */
-    env: "deno" | "browser";
+    undeclared_npm_imports?: string[];
 
     /**
-     * imports that are handled by other plugins
+     * import map that is only applied to build module resolution.
+     *
+     * Useful for polyfilling `node:` and handling injected imports (JSX runtime, HMR, ...)
+     */
+    extra_import_map?: [string, string][] | Map<string, string | Promise<string>>;
+
+    /**
+     * don't touch these imports
      */
     exclude?: (string | RegExp)[];
 }
@@ -61,41 +71,35 @@ export interface PluginDenoOptions {
  * pluginDeno
  */
 export function pluginDeno(options: PluginDenoOptions): Plugin {
-    const extra_import_map = new Map(options.extra_import_map || [["buffer", "npm:buffer"]]);
+    const extra_import_map = new Map(options.extra_import_map);
     const o: Opt = {
         deno_json: options.deno_json,
         deno_lock: options.deno_lock,
         extra_import_map,
-        environment: options.env,
-        exclude: [...options.exclude || []],
+        environment: options.env ?? "browser",
+        exclude: [...options.exclude ?? []],
     };
+
     if (o.environment === "deno") {
         o.exclude.push(/^node:/);
     }
+    o.exclude.push(/\/@fs/);
+    o.exclude.push(/\/@id/);
+    o.exclude.push(/\/@vite\//);
+    o.exclude.push(/@vite\//);
+
     const graph = new ModuleGraph(o);
+
+    resolve_undeclared_npm(options.undeclared_npm_imports ?? [], graph, extra_import_map);
+
     return {
         name: "vite-plugin-deno",
         enforce: "pre",
         resolveId: {
             order: "pre",
             async handler(id, referrer) {
-                // console.log(`%c[HANDLE]         ${id}`, "color:orange");
-                // console.log(`%c            from ${referrer}`, "color:orange");
                 id = decodeSpec(id);
                 referrer = referrer && decodeSpec(referrer);
-
-                if (id.startsWith("/@fs")) {
-                    return null;
-                }
-                if (id.startsWith("/@id")) {
-                    return null;
-                }
-                if (id.startsWith("/@vite/")) {
-                    return null;
-                }
-                if (id.startsWith("@vite/")) {
-                    return null;
-                }
 
                 for (const exclude of o.exclude) {
                     if (exclude instanceof RegExp) {
@@ -131,14 +135,10 @@ export function pluginDeno(options: PluginDenoOptions): Plugin {
                     try {
                         await Deno.stat(`.${id}`);
                     } catch (_err) {
-                        // console.log(`%c[NOT EXISTING]   ${id}`, "color:red");
                         return null;
                     }
                     id = toFileUrl(`${Deno.cwd()}${id}`).href;
                 }
-
-                // console.log(`%c[RESOLVING]      ${id}`, "color:#f0a");
-                // console.log(`%c            from ${referrer}`, "color:#f0a");
 
                 const resolved = await resolve(o, graph, id, referrer);
 
@@ -147,16 +147,16 @@ export function pluginDeno(options: PluginDenoOptions): Plugin {
         },
         async load(id) {
             id = decodeSpec(id);
-            // console.log(`%c[LOADING]        ${id}`, "color:green");
 
             const mod = graph.get_resolved(id);
 
             if (!mod) {
-                // console.log(`%c[NOT RESOLVED]   ${id}`, "color: red");
                 return;
             }
 
-            return await mod.load();
+            const result = await mod.load();
+
+            return result;
         },
     };
 }

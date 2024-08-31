@@ -39,13 +39,17 @@ export function toESM(raw_code: string) {
     return raw_code;
 }
 
-export function has_default_export(code: string) {
+const default_export_cache = new Map<string, boolean>();
+
+export function has_default_export(code: string, id: string = code) {
+    if (default_export_cache.has(id)) {
+        return default_export_cache.get(id)!;
+    }
     if (!code.includes("default")) {
+        default_export_cache.set(id, false);
         return false;
     }
-    if (code.includes("\nexport default ")) {
-        return true;
-    }
+
     const ast = parse(code, {
         ecmaVersion: 2023,
         sourceType: "module",
@@ -68,6 +72,8 @@ export function has_default_export(code: string) {
             }
         },
     });
+
+    default_export_cache.set(id, hasDefaultExport);
 
     return hasDefaultExport;
 }

@@ -28,7 +28,7 @@ import type { Opt } from "./options.ts";
 
 export async function resolve(o: Opt, graph: ModuleGraph, id: string, referrer?: string, may_fetch: boolean = true) {
     if (o.extra_import_map.has(id)) {
-        return await resolve(o, graph, o.extra_import_map.get(id)!, referrer, may_fetch);
+        return await resolve(o, graph, await o.extra_import_map.get(id)!, referrer, may_fetch);
     }
 
     const referrer_mod = graph.get_resolved(referrer!);
@@ -61,7 +61,7 @@ export async function resolve(o: Opt, graph: ModuleGraph, id: string, referrer?:
             if (graph.npm_package_versions.has(maybe_npm.name)) {
                 const versions = graph.npm_package_versions.get(maybe_npm.name)!;
                 throw new Error(`cannot resolve ${id} from ${referrer}
-${maybe_npm.name} has been recognized as an NPM package, if it is an injected import you may want to add one of the following entries to extra_import_map:
+${maybe_npm.name} has been recognized as an NPM package, if it is an injected import you may want to add "${maybe_npm.name}" to undeclared_npm_imports or one of the following entries to extra_import_map:
 ${
                     [...versions.values()].map((version) =>
                         `"${id}" => "npm:${maybe_npm.name}@${version}${maybe_npm.path ? `/${maybe_npm.path}` : ""}"`

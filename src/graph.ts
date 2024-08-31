@@ -189,7 +189,7 @@ export class ModuleGraph {
     readonly npm_packages = new Map<string, NPMPackage>();
     readonly npm_package_versions = new Map<string, Set<string>>();
 
-    private async call_deno(root: string) {
+    async call_deno(root: string) {
         const args = ["info", "--json"];
         if (this.o.deno_json) {
             args.push("--config", this.o.deno_json);
@@ -205,12 +205,11 @@ export class ModuleGraph {
             stderr: "inherit",
         });
 
-        return JSON.parse(new TextDecoder().decode((await info.output()).stdout));
+        const data = JSON.parse(new TextDecoder().decode((await info.output()).stdout));
+        return data;
     }
 
     private async get_deno_info(root: string) {
-        console.log(`%c[DENO INFO]      ${root}`, "color:cyan");
-
         const parsed = DenoInfoOutput.safeParse(await this.call_deno(root));
 
         if (!parsed.success) {

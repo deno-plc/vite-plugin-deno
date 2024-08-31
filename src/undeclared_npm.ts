@@ -21,10 +21,26 @@
  * USA or see <https://www.gnu.org/licenses/>.
  */
 
-export interface Opt {
-    deno_json?: string;
-    deno_lock?: string;
-    extra_import_map: Map<string, string | Promise<string>>;
-    environment: "deno" | "browser";
-    exclude: (string | RegExp)[];
+import { z } from "zod";
+import { parseModuleSpecifier } from "./specifier.ts";
+import type { ModuleGraph } from "./graph.ts";
+
+const Schema = z.object({
+    redirects: z.record(z.string().transform(parseModuleSpecifier)),
+});
+
+export function resolve_undeclared_npm(
+    packages: string[],
+    graph: ModuleGraph,
+    extra_import_map: Map<string, string | Promise<string>>,
+) {
+    for (const pkg of packages) {
+        extra_import_map.set(
+            pkg,
+            graph
+                .call_deno(`npm:${pkg}`)
+                .then(Schema.parse)
+                .then(({ redirects }) => redirects[`npm:${pkg}`].href),
+        );
+    }
 }

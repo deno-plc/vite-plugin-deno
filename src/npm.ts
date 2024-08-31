@@ -163,7 +163,7 @@ export async function getNPMData(specifier: ModuleSpecifier) {
 export async function get_npm_import_link(info: NPMImportInfo): Promise<string> {
     const importedCode = await getNPMData(info.module);
 
-    if (has_default_export(importedCode)) {
+    if (has_default_export(importedCode, info.specifier.href)) {
         return `
 // npm:${info.package.name}@${format(info.package.version)}
 
