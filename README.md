@@ -1,4 +1,4 @@
-# vite-plugin-deno
+# [@Deno-PLC](https://github.com/deno-plc) / [vite-plugin-deno](https://jsr.io/@deno-plc/vite-plugin-deno)
 
 Native Vite support for Deno imports (jsr:, npm:, https://).
 
