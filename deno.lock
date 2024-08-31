@@ -18,6 +18,8 @@
       "npm:@types/node@18.16.19": "npm:@types/node@18.16.19",
       "npm:@types/semver": "npm:@types/semver@7.5.8",
       "npm:@types/tar-stream": "npm:@types/tar-stream@3.1.3",
+      "npm:acorn-walk@^8.3.3": "npm:acorn-walk@8.3.3",
+      "npm:acorn@^8.12.1": "npm:acorn@8.12.1",
       "npm:lebab@^3.2.4": "npm:lebab@3.2.4",
       "npm:lodash-es": "npm:lodash-es@4.17.21",
       "npm:lodash-es@^4.17.21": "npm:lodash-es@4.17.21",
@@ -723,8 +725,18 @@
           "acorn": "acorn@8.11.3"
         }
       },
+      "acorn-walk@8.3.3": {
+        "integrity": "sha512-MxXdReSRhGO7VlFe1bRG/oI7/mdLV9B9JJT0N8vZOhF7gFRR5l3M8W9G8JxmKV+JC5mGqJ0QvqfSOLsCPa4nUw==",
+        "dependencies": {
+          "acorn": "acorn@8.12.1"
+        }
+      },
       "acorn@8.11.3": {
         "integrity": "sha512-Y9rRfJG5jcKOE0CLisYbojUjIrIEE7AGMzA/Sm4BslANhbS+cDMpgBdcPT91oJ7OuJ9hYJBx59RjbhxVnrF8Xg==",
+        "dependencies": {}
+      },
+      "acorn@8.12.1": {
+        "integrity": "sha512-tcpGyI9zbizT9JbV6oYE477V6mTlXvvi0T0G3SNIYE2apm/G5huBa1+K89VGeovbg+jycCrfhl3ADxErOuO6Jg==",
         "dependencies": {}
       },
       "agent-base@6.0.2": {
@@ -1737,6 +1749,8 @@
       "jsr:@std/path@^0.225.1",
       "jsr:@std/semver@^1.0.2",
       "npm:@coderspirit/nominal@^4.1.1",
+      "npm:acorn-walk@^8.3.3",
+      "npm:acorn@^8.12.1",
       "npm:lebab@^3.2.4",
       "npm:resolve.exports@^2.0.2",
       "npm:validate-npm-package-name@^5.0.1",

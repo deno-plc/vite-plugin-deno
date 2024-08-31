@@ -28,7 +28,7 @@ import type { ModuleGraph, NPMImportInfo } from "./graph.ts";
 import * as npmResolver from "resolve.exports";
 import { assert } from "jsr:@std/assert@^0.225.2/assert";
 import { type ModuleSpecifier, parseModuleSpecifier, parseNPMExact } from "./specifier.ts";
-import { transform } from "lebab";
+import { has_default_export, toESM } from "./ast-ops.ts";
 
 export const PackageJSON = z.object({
     name: z.string(),
@@ -155,29 +155,15 @@ export async function getNPMData(specifier: ModuleSpecifier) {
     const id = parseNPMExact(specifier.pathname);
     assert(id);
     const raw_code = await Deno.readTextFile(join(await getNPMPath(id.name, id.version), id.path));
-    const code = transform_code(raw_code);
+    const code = toESM(raw_code);
     npm_data_transform_cache.set(specifier.href, code);
     return code;
-}
-
-function transform_code(raw_code: string): string {
-    if (raw_code.includes("require") || raw_code.includes("module")) {
-        const { code, warnings } = transform(
-            raw_code,
-            ["commonjs"],
-        );
-        for (const $ of warnings) {
-            console.log($);
-        }
-        return code;
-    }
-    return raw_code;
 }
 
 export async function get_npm_import_link(info: NPMImportInfo): Promise<string> {
     const importedCode = await getNPMData(info.module);
 
-    if (importedCode.includes("export default") || importedCode.includes(" as default")) {
+    if (has_default_export(importedCode)) {
         return `
 // npm:${info.package.name}@${format(info.package.version)}
 

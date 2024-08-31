@@ -22,6 +22,8 @@
         "@std/fs": "jsr:@std/fs@^0.223.0",
         "@std/path": "jsr:@std/path@^0.225.1",
         "@std/semver": "jsr:@std/semver@^1.0.2",
+        "acorn": "npm:acorn@^8.12.1",
+        "acorn-walk": "npm:acorn-walk@^8.3.3",
         "lebab": "npm:lebab@^3.2.4",
         "resolve.exports": "npm:resolve.exports@^2.0.2",
         "validate-npm-package-name": "npm:validate-npm-package-name@^5.0.1",
