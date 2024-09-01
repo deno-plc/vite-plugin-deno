@@ -161,14 +161,21 @@ This import map can be used to polyfill `node:` or do the same as `undeclared_np
 
 Those imports wont be touched.
 
-## Usage with React (coming soon)
+## Usage with React
+
+Currently React is unsupported.
+
+1. `react-dom` does some extremely ugly things with cjs exports (like exporting inside an if statement ...). For this
+   reason it cannot be transformed to ESM correctly, but this is not the only problem.
+2. The Deno LSP has problems with React, too. This time it is about missing JSXRuntime types...
 
 I personally only use Preact, so this is not top priority.
 
-Until this is supported out of the box you should be able to use the Preact configuration, it will use the React
-compatibility layer. Read more: https://preactjs.com/guide/v10/switching-to-preact
+Until this is supported out of the box you could use the Preact configuration. If you are doing this, all react imports
+are redirected to preact and the whole application is run with the react compatibility layer... (this works without any
+problems 🤯) Read more: https://preactjs.com/guide/v10/switching-to-preact.
 
-If you have experience with Vite plugins and import resolving you should be able to get React working natively.
+If you really need React, please file an issue.
 
 ## Usage with Preact
 
@@ -226,7 +233,7 @@ And your `deno.json`:
 
 ```json
 "compilerOptions": {
-    "jsx": "automatic",
+    "jsx": "react-jsx",
     "jsxImportSource": "preact",
 }
 ```
@@ -280,6 +287,10 @@ Deno.stat = (...args) =>
         }
     });
 ```
+
+### React does not work (and maybe more packages that do ugly things with exports)
+
+See [Usage with React](#usage-with-react)
 
 ## Acknowledgements
 
