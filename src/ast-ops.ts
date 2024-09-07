@@ -21,27 +21,26 @@
  * USA or see <https://www.gnu.org/licenses/>.
  */
 
-import { transform } from "lebab";
-import { parse } from "acorn";
-import { simple as walk_simple } from "acorn-walk";
+import { WorkerPool } from "./ast-pool.ts";
 
-export function toESM(raw_code: string) {
+const pool = new WorkerPool(navigator.hardwareConcurrency ?? 4);
+
+export async function toESM(raw_code: string, id: string) {
     if (raw_code.includes("require") || raw_code.includes("module")) {
-        const { code, warnings } = transform(
+        return (await pool.run({
+            task_id: pool.get_task_id(),
+            kind: "cjs-to-esm",
+            id,
             raw_code,
-            ["commonjs"],
-        );
-        for (const $ of warnings) {
-            console.log($);
-        }
-        return code;
+        })).code!;
+    } else {
+        return raw_code;
     }
-    return raw_code;
 }
 
-const default_export_cache = new Map<string, boolean>();
+const default_export_cache = new Map<string, Promise<boolean> | boolean>();
 
-export function has_default_export(code: string, id: string = code) {
+export async function has_default_export(code: string, id: string = code): Promise<boolean> {
     if (default_export_cache.has(id)) {
         return default_export_cache.get(id)!;
     }
@@ -50,30 +49,16 @@ export function has_default_export(code: string, id: string = code) {
         return false;
     }
 
-    const ast = parse(code, {
-        ecmaVersion: 2023,
-        sourceType: "module",
-    });
+    const pr = (async () =>
+        (await pool.run({
+            task_id: pool.get_task_id(),
+            kind: "default-exports",
+            id,
+            raw_code: code,
+        })).has_default_export!)();
 
-    let hasDefaultExport = false;
-
-    walk_simple(ast, {
-        ExportDefaultDeclaration(_node) {
-            hasDefaultExport = true;
-        },
-        ExportNamedDeclaration(node) {
-            if (node.specifiers) {
-                for (const specifier of node.specifiers) {
-                    // @ts-ignore missing typedef
-                    if (specifier.type === "ExportSpecifier" && specifier.exported?.name === "default") {
-                        hasDefaultExport = true;
-                    }
-                }
-            }
-        },
-    });
-
-    default_export_cache.set(id, hasDefaultExport);
-
-    return hasDefaultExport;
+    default_export_cache.set(id, pr);
+    const has_default_export = await pr;
+    default_export_cache.set(id, has_default_export);
+    return has_default_export;
 }

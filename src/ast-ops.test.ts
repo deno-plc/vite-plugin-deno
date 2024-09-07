@@ -24,9 +24,9 @@
 import { assert } from "@std/assert";
 import { has_default_export } from "./ast-ops.ts";
 
-Deno.test("has default export", () => {
-    assert(has_default_export(`export default function foo(){}`) === true);
-    assert(has_default_export(`function foo(){}\n export {foo as default};`) === true);
-    assert(has_default_export(`// export default`) === false);
-    assert(has_default_export(`// export {foo as default}`) === false);
+Deno.test("has default export", async () => {
+    assert(await has_default_export(`export default function foo(){}`) === true);
+    assert(await has_default_export(`function foo(){}\n export {foo as default};`) === true);
+    assert(await has_default_export(`// export default`) === false);
+    assert(await has_default_export(`// export {foo as default}`) === false);
 });

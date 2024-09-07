@@ -2,13 +2,21 @@
     "name": "@deno-plc/vite-plugin-deno",
     "version": "2.0.3",
     "exports": "./mod.ts",
+    "compilerOptions": {
+        "lib": [
+            "deno.window",
+            "deno.ns",
+            "ESNext",
+            "webworker"
+        ]
+    },
     "fmt": {
         "indentWidth": 4,
         "lineWidth": 120
     },
     "tasks": {
-        "check": "deno fmt && deno lint && deno publish --dry-run --allow-dirty && deno test --parallel",
-        "check-ci": "deno fmt --check && deno lint && deno publish --dry-run && deno test --parallel"
+        "check": "deno fmt && deno lint && deno publish --dry-run --allow-dirty && deno test -A --parallel",
+        "check-ci": "deno fmt --check && deno lint && deno publish --dry-run && deno test -A --parallel"
     },
     "lint": {
         "rules": {

@@ -146,24 +146,32 @@ export class NPMPackage {
     }
 }
 
-const npm_data_transform_cache = new Map<string, string>();
+const npm_data_transform_cache = new Map<string, string | Promise<string>>();
 
 export async function getNPMData(specifier: ModuleSpecifier) {
     if (npm_data_transform_cache.has(specifier.href)) {
         return npm_data_transform_cache.get(specifier.href)!;
     }
+
+    const pr = getNPMDataInner(specifier);
+    npm_data_transform_cache.set(specifier.href, pr);
+    const code = await pr;
+    npm_data_transform_cache.set(specifier.href, code);
+    return code;
+}
+
+async function getNPMDataInner(specifier: ModuleSpecifier) {
     const id = parseNPMExact(specifier.pathname);
     assert(id);
     const raw_code = await Deno.readTextFile(join(await getNPMPath(id.name, id.version), id.path));
-    const code = toESM(raw_code);
-    npm_data_transform_cache.set(specifier.href, code);
+    const code = toESM(raw_code, specifier.href);
     return code;
 }
 
 export async function get_npm_import_link(info: NPMImportInfo): Promise<string> {
     const importedCode = await getNPMData(info.module);
 
-    if (has_default_export(importedCode, info.specifier.href)) {
+    if (await has_default_export(importedCode, info.specifier.href)) {
         return `
 // npm:${info.package.name}@${format(info.package.version)}
 
