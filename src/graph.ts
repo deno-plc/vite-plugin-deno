@@ -115,7 +115,9 @@ export class GraphModule {
             for (const $ of def.dependencies) {
                 if ($.code) {
                     graph.get_module(parseModuleSpecifier($.code.specifier), false).then((mod) => {
-                        this.esm_dependencies.set($.specifier, mod);
+                        if (mod) {
+                            this.esm_dependencies.set($.specifier, mod);
+                        }
                     });
                 }
             }
@@ -139,7 +141,7 @@ export class GraphModule {
         } else if (this.def.kind === npmDataKind) {
             return await getNPMData(this.def.specifier);
         }
-        throw new Error(`module type unsupported`);
+        throw new Error(`module type ${this.def.kind} unsupported`);
     }
 
     async load(): Promise<string> {
@@ -190,6 +192,7 @@ export class ModuleGraph {
     readonly npm_package_versions = new Map<string, Set<string>>();
 
     async call_deno(root: string) {
+        console.log(`deno info ${root}`);
         const args = ["info", "--json"];
         if (this.o.deno_json) {
             args.push("--config", this.o.deno_json);
@@ -271,6 +274,13 @@ export class ModuleGraph {
             this.#redirects.set(parseModuleSpecifier(redirect).href, redirects[redirect]);
         }
 
+        // remove self-redirects
+        for (const [k, v] of this.#redirects) {
+            if (k === v.href) {
+                this.#redirects.delete(k);
+            }
+        }
+
         await Promise.all(waitNPM);
 
         for (const [_id, pkg] of this.npm_packages) {
@@ -278,7 +288,9 @@ export class ModuleGraph {
         }
 
         for (const mod of modules) {
-            new GraphModule(mod, this);
+            if (mod.kind === "esm") {
+                new GraphModule(mod, this);
+            }
         }
     }
 
@@ -289,8 +301,9 @@ export class ModuleGraph {
         this.#pending = null;
     }
 
-    async get_module(specifier: ModuleSpecifier, may_fetch: boolean = true): Promise<GraphModule> {
+    async get_module(specifier: ModuleSpecifier, may_fetch: boolean = true): Promise<GraphModule | null> {
         if (this.#redirects.has(specifier.href)) {
+            // console.log(`redirecting ${specifier}`);
             return await this.get_module(this.#redirects.get(specifier.href)!, may_fetch);
         }
         if (this.modules.has(specifier.href)) {
@@ -360,8 +373,10 @@ export class ModuleGraph {
             await this.update_info(specifier);
             return await this.get_module(specifier, false);
         } else {
-            console.log(`Specifier ${specifier} could not be resolved`);
-            throw new Error(`Specifier ${specifier} could not be resolved`);
+            // console.log(`Specifier ${specifier} could not be resolved`);
+            // throw new Error(`Specifier ${specifier} could not be resolved`);
+
+            return null;
         }
     }
 

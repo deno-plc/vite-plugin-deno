@@ -24,7 +24,6 @@
 import type { Plugin } from "vite";
 import type { Opt } from "./src/options.ts";
 import { ModuleGraph } from "./src/graph.ts";
-import { join, toFileUrl } from "@std/path";
 import { decodeSpec, encodeSpec, resolve } from "./src/resolve.ts";
 import { resolve_undeclared_npm } from "./src/undeclared_npm.ts";
 
@@ -87,6 +86,7 @@ export function pluginDeno(options: PluginDenoOptions): Plugin {
     o.exclude.push(/\/@id/);
     o.exclude.push(/\/@vite\//);
     o.exclude.push(/@vite\//);
+    o.exclude.push("<stdin>");
 
     const graph = new ModuleGraph(o);
 
@@ -112,6 +112,10 @@ export function pluginDeno(options: PluginDenoOptions): Plugin {
                 id = decodeSpec(id);
                 referrer = referrer && decodeSpec(referrer);
 
+                if (id.endsWith(".html")) {
+                    return null;
+                }
+
                 for (const exclude of o.exclude) {
                     if (exclude instanceof RegExp) {
                         if (exclude.test(id)) {
@@ -124,31 +128,6 @@ export function pluginDeno(options: PluginDenoOptions): Plugin {
                     if (exclude === id || exclude === referrer) {
                         return null;
                     }
-                }
-
-                if (referrer) {
-                    try {
-                        await Deno.stat(`${referrer}`);
-                        referrer = toFileUrl(referrer).href;
-                    } catch (_err) {
-                        //
-                    }
-                } else {
-                    try {
-                        await Deno.stat(`./${id}`);
-                        id = toFileUrl(join(Deno.cwd(), id)).href;
-                    } catch (_err) {
-                        //
-                    }
-                }
-
-                if (id.startsWith("/")) {
-                    try {
-                        await Deno.stat(`.${id}`);
-                    } catch (_err) {
-                        return null;
-                    }
-                    id = toFileUrl(`${Deno.cwd()}${id}`).href;
                 }
 
                 const resolved = await resolve(o, graph, id, referrer);
