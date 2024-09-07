@@ -217,7 +217,7 @@ export const config: InlineConfig = {
         }),
         // HMR Plugin
         prefresh({
-            // `node_modules` is included internally, lets do the same
+            // `node_modules` is excluded internally, lets do the same
             exclude: [/^npm/, /registry.npmjs.org/, /^jsr/, /^https?/],
         }) as Plugin,
     ],
@@ -250,7 +250,7 @@ Just set the `env` option to `deno`, everything should work out of the box! (eve
 
 This can replace `deno bundle`.
 
-If you want a simpler solution, check out [esbuild_deno_loader](https://github.com/lucacasonato/esbuild_deno_loader),
+If you want a lightweight solution, check out [esbuild_deno_loader](https://github.com/lucacasonato/esbuild_deno_loader),
 which is exactly the same for esbuild.
 
 ## Known limitations
@@ -303,7 +303,7 @@ See [Usage with React](#usage-with-react)
 
 ## Acknowledgements
 
-[esbuild_deno_loader](https://github.com/lucacasonato/esbuild_deno_loader) does essentially the same for esbuild. The
+[esbuild_deno_loader](https://github.com/lucacasonato/esbuild_deno_loader) does exactly the same for esbuild. The
 basic principle of operation is the same.
 
 [resolve.exports](https://github.com/lukeed/resolve.exports) helped a lot, it handles all the `package.json` fields.
