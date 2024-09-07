@@ -62,8 +62,8 @@ Read more about [package.json compatibility](https://deno.com/blog/v1.31#package
 [node_modules compatibility](https://docs.deno.com/runtime/manual/tools/unstable_flags/#--unstable-byonm)
 
 If you have installed a dependency locally you can
-[`exclude`](https://jsr.io/@deno-plc/vite-plugin-deno/doc/~/PluginDenoOptions.exclude) it and reenable the Vite module
-resolution. This might be required for dependencies with _**many**_ files. This plugin currently does no pre-bundling,
+[`exclude`](https://jsr.io/@deno-plc/vite-plugin-deno/doc/~/PluginDenoOptions.exclude) it (reenables the Vite module
+resolution). This might be required for dependencies with _**many**_ files. This plugin currently does no pre-bundling,
 so every file is loaded individually, in case of `lodash-es` this results in ~650 HTTP requests.
 
 ## Usage
@@ -243,6 +243,15 @@ one import)
 
 We need the prefresh exclude rule to replicate the internal exclude of all paths containing `node_modules`. Otherwise
 prefresh would inject HMR helpers into libraries and the code that powers HMR, which causes very strange errors.
+
+## Usage with Deno (Code bundling)
+
+Just set the `env` option to `deno`, everything should work out of the box! (even with `node:` imports)
+
+This can replace `deno bundle`.
+
+If you want a simpler solution, check out [esbuild_deno_loader](https://github.com/lucacasonato/esbuild_deno_loader),
+which is exactly the same for esbuild.
 
 ## Known limitations
 
