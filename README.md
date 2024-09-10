@@ -250,10 +250,15 @@ Just set the `env` option to `deno`, everything should work out of the box! (eve
 
 This can replace `deno bundle`.
 
-If you want a lightweight solution, check out [esbuild_deno_loader](https://github.com/lucacasonato/esbuild_deno_loader),
-which is exactly the same for esbuild.
+If you want a lightweight solution, check out
+[esbuild_deno_loader](https://github.com/lucacasonato/esbuild_deno_loader), which is exactly the same for esbuild.
 
-## Known limitations
+## FAQ / Known limitations
+
+### New imports are not recognized sometimes
+
+If you add an import and get an error like `cannot resolve <import> from <...>`, you might need to restart the dev
+server. Most of the time new imports should be recognized automatically.
 
 ### Build scripts
 
@@ -303,8 +308,8 @@ See [Usage with React](#usage-with-react)
 
 ## Acknowledgements
 
-[esbuild_deno_loader](https://github.com/lucacasonato/esbuild_deno_loader) does exactly the same for esbuild. The
-basic principle of operation is the same.
+[esbuild_deno_loader](https://github.com/lucacasonato/esbuild_deno_loader) does exactly the same for esbuild. The basic
+principle of operation is the same.
 
 [resolve.exports](https://github.com/lukeed/resolve.exports) helped a lot, it handles all the `package.json` fields.
 
