@@ -132,7 +132,11 @@ export function pluginDeno(options: PluginDenoOptions): Plugin {
 
                 const resolved = await resolve(o, graph, id, referrer);
 
-                return encodeSpec(resolved);
+                if (resolved) {
+                    return encodeSpec(resolved);
+                } else {
+                    return null;
+                }
             },
         },
         async load(id) {

@@ -112,6 +112,9 @@ export async function resolve(o: Opt, graph: ModuleGraph, id: string, referrer?:
             }`);
         }
     }
+    if (referrer?.endsWith(".html")) {
+        return null;
+    }
     throw new Error(`cannot resolve ${id} from ${referrer}`);
 }
 
