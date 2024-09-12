@@ -164,7 +164,8 @@ async function getNPMDataInner(specifier: ModuleSpecifier) {
     const id = parseNPMExact(specifier.pathname);
     assert(id);
     const raw_code = await Deno.readTextFile(join(await getNPMPath(id.name, id.version), id.path));
-    const code = toESM(raw_code, specifier.href);
+    let code = await toESM(raw_code, specifier.href);
+    code = code.replace(/\/\/# sourceMappingURL.+/, ""); // TODO resolve source map url
     return code;
 }
 
