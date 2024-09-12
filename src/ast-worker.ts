@@ -45,7 +45,11 @@ function run_task(task: AstTask): Omit<AstResult, "task_id"> {
             ["commonjs"],
         );
         for (const $ of warnings) {
-            console.log($);
+            if ($.msg === "export can only be at root level") {
+                throw new Error(`Failed to transform to ESM: ${task.id} does UGLY things with Cjs exports.`);
+            } else {
+                console.warn(task.id, $);
+            }
         }
 
         return {
