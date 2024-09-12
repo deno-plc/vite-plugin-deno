@@ -28,6 +28,7 @@ import { format, parse } from "@std/semver";
 import { get_npm_import_link, getNPMData, getNPMPath, importProbe, NPMPackage } from "./npm.ts";
 import { type ModuleSpecifier, parseModuleSpecifier, parseNPMExact, parseNPMImport } from "./specifier.ts";
 import { assert } from "jsr:@std/assert@^0.225.2/assert";
+import { is_excluded } from "./exclude.ts";
 
 const DenoInfoPosition = z.object({
     line: z.number().int().nonnegative(),
@@ -92,6 +93,7 @@ const DenoInfoOutput = z.object({
 
 export const npmImportKind = Symbol();
 export const npmDataKind = Symbol();
+export const virtualImportKind = Symbol();
 
 export interface NPMImportInfo {
     kind: typeof npmImportKind;
@@ -307,9 +309,9 @@ export class ModuleGraph {
         }
 
         Promise.all(waitNPM).then(() => {
-        for (const [_id, pkg] of this.npm_packages) {
-            pkg.link();
-        }
+            for (const [_id, pkg] of this.npm_packages) {
+                pkg.link();
+            }
         });
 
         for (const mod of modules) {
@@ -327,6 +329,9 @@ export class ModuleGraph {
     }
 
     async get_module(specifier: ModuleSpecifier, may_fetch: boolean = true): Promise<GraphModule | null> {
+        if (is_excluded(specifier.href, this.o)) {
+            return null;
+        }
         if (this.#redirects.has(specifier.href)) {
             // console.log(`redirecting ${specifier}`);
             return await this.get_module(this.#redirects.get(specifier.href)!, may_fetch);

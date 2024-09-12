@@ -21,10 +21,33 @@
  * USA or see <https://www.gnu.org/licenses/>.
  */
 
-export interface Opt {
-    deno_json?: string;
-    deno_lock?: string;
-    extra_import_map: Map<string, string | Promise<string>>;
-    environment: "deno" | "browser";
-    exclude: RegExp[];
+import type { Opt } from "./options.ts";
+
+function is_excluded_inner(spec: string, o: Opt) {
+    for (const exclude of o.exclude) {
+        if (exclude.test(spec)) {
+            return true;
+        }
+    }
+    return false;
 }
+
+const cache = new Map<string, boolean>();
+
+export function is_excluded(spec: string, o: Opt): boolean {
+    return cache.get(spec) ?? (() => {
+        const excl = is_excluded_inner(spec, o);
+        cache.set(spec, excl);
+        return excl;
+    })();
+}
+
+function* cache_info() {
+    for (const [id, excl] of cache) {
+        yield `${excl ? "-" : "+"} ${id}`;
+    }
+}
+
+setTimeout(() => {
+    Deno.writeTextFile("exclude-cache.txt", [...cache_info()].join("\n"));
+}, 10000);

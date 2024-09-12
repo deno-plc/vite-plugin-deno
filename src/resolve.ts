@@ -35,7 +35,13 @@ async function exists(path: string): Promise<boolean> {
     }
 }
 
-export async function resolve(o: Opt, graph: ModuleGraph, id: string, referrer?: string, may_fetch: boolean = true) {
+export async function resolve(
+    o: Opt,
+    graph: ModuleGraph,
+    id: string,
+    referrer?: string,
+    may_fetch: boolean = true,
+): Promise<ModuleSpecifier | null> {
     // console.log(`%c[RESOLVE]        ${id}`, "color:#ff0");
     if (o.extra_import_map.has(id)) {
         return await resolve(o, graph, await o.extra_import_map.get(id)!, referrer, may_fetch);
@@ -44,6 +50,12 @@ export async function resolve(o: Opt, graph: ModuleGraph, id: string, referrer?:
     if (referrer === undefined) {
         // local entrypoint
         id = join(Deno.cwd(), id);
+    }
+
+    const fast_forward = graph.get_resolved(id);
+
+    if (fast_forward) {
+        return fast_forward.specifier;
     }
 
     let referrer_mod = referrer ? graph.get_resolved(referrer) : null;
@@ -55,17 +67,26 @@ export async function resolve(o: Opt, graph: ModuleGraph, id: string, referrer?:
         referrer_mod = await graph.get_module(toFileUrl(referrer) as ModuleSpecifier);
     }
 
+    if (id.endsWith("#standalone")) {
+        const mod = await graph.get_module(parseModuleSpecifier(id.substring(0, id.length - "#standalone".length)));
+        if (mod) {
+            return mod.specifier;
+        }
+    }
+
     if (referrer_mod) {
         // console.log(`%c[REFERRER]       ${referrer_mod.specifier.href}`, "color: gray");
         const ref = await referrer_mod.resolve_import(id);
         if (ref) {
             return ref.specifier;
-        } else if (!id.startsWith("npm")) {
-            if (may_fetch) {
-                await graph.update_info(referrer_mod.specifier);
-                return await resolve(o, graph, id, referrer, false);
-            } else {
-                throw new Error(`cannot resolve '${id}' from ${referrer_mod.specifier.href}`);
+        } else {
+            if (!id.startsWith("npm")) {
+                if (may_fetch) {
+                    await graph.update_info(referrer_mod.specifier);
+                    return await resolve(o, graph, id, referrer, false);
+                } else {
+                    throw new Error(`cannot resolve '${id}' from ${referrer_mod.specifier.href}`);
+                }
             }
         }
     }

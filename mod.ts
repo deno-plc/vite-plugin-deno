@@ -26,6 +26,7 @@ import type { Opt } from "./src/options.ts";
 import { ModuleGraph } from "./src/graph.ts";
 import { decodeSpec, encodeSpec, resolve } from "./src/resolve.ts";
 import { resolve_undeclared_npm } from "./src/undeclared_npm.ts";
+import { is_excluded } from "./src/exclude.ts";
 
 /**
  * Plugin configuration
@@ -76,17 +77,25 @@ export function pluginDeno(options: PluginDenoOptions): Plugin {
         deno_lock: options.deno_lock,
         extra_import_map,
         environment: options.env ?? "browser",
-        exclude: [...options.exclude ?? []],
+        exclude: [
+            ...options.exclude?.map((excl) => {
+                if (excl instanceof RegExp) {
+                    return excl;
+                } else {
+                    // transform to regexp
+                    return new RegExp(`^${excl.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`);
+                }
+            }) ?? [],
+        ],
     };
 
     if (o.environment === "deno") {
         o.exclude.push(/^node:/);
     }
-    o.exclude.push(/\/@fs/);
-    o.exclude.push(/\/@id/);
-    o.exclude.push(/\/@vite\//);
-    o.exclude.push(/@vite\//);
-    o.exclude.push("<stdin>");
+    o.exclude.push(/\/@(fs|id)/);
+    o.exclude.push(/\/?(@|\.)vite\//);
+    o.exclude.push(/\/node_modules\//);
+    o.exclude.push(/^<stdin>$/);
 
     const graph = new ModuleGraph(o);
 
@@ -116,18 +125,12 @@ export function pluginDeno(options: PluginDenoOptions): Plugin {
                     return null;
                 }
 
-                for (const exclude of o.exclude) {
-                    if (exclude instanceof RegExp) {
-                        if (exclude.test(id)) {
-                            return null;
-                        }
-                        if (referrer && exclude.test(referrer)) {
-                            return null;
-                        }
-                    }
-                    if (exclude === id || exclude === referrer) {
-                        return null;
-                    }
+                if (is_excluded(id, o)) {
+                    return null;
+                }
+
+                if (referrer && is_excluded(referrer, o)) {
+                    return null;
                 }
 
                 const resolved = await resolve(o, graph, id, referrer);
