@@ -44,13 +44,16 @@ export interface PluginDenoOptions {
 
     /**
      * bundling context
-     * 1. Controls the Node module resolution conditions (when set to `"browser"` the package.json `browser` entry is preferred over `main`)
+     * 1. Controls the Node module resolution conditions (when set to `"browser"` the package.json
+     * `browser` entry is preferred over `main`)
      * 2. `node:` imports are only allowed when set to `"deno"`
      */
     env?: "deno" | "browser";
 
     /**
-     * Those NPM packages will always be allowed even if they are not included in Deno's module graph
+     * Those NPM packages will always be allowed even if they are not included in Deno's module graph.
+     *
+     * This can be used to resolve packages that are imported by injected code like HMR.
      */
     undeclared_npm_imports?: string[];
 
@@ -58,17 +61,31 @@ export interface PluginDenoOptions {
      * import map that is only applied to build module resolution.
      *
      * Useful for polyfilling `node:` and handling injected imports (JSX runtime, HMR, ...)
+     *
+     * Sometimes it might be required to add `#standalone` to the replaced import, otherwise
+     * you will get errors because the replaced import is (of course) not reported by deno info.
+     * The `#standalone` instructs the plugin to treat the import like an independent entrypoint.
      */
     extra_import_map?: [string, string][] | Map<string, string | Promise<string>>;
 
     /**
-     * don't touch these imports
+     * All specifiers that are equal to this or match the RegExp are ignored, deferring
+     * resolution to other plugins and Vite.
+     *
+     * Using strings is deprecated (strings are converted to RegExps anyway)
+     *
+     * Note that the specifiers passed to this might be in different formats (even for the
+     * same one) depending on the circumstances where it is checked: It might be absolute
+     * or relative, as path or `file:` URL and with or without `npm:` prefix, semver version
+     * or version range.
+     *
+     * The RegExps should not be too expensive to check
      */
     exclude?: (string | RegExp)[];
 }
 
 /**
- * pluginDeno
+ * see {@link PluginDenoOptions}
  */
 export function pluginDeno(options: PluginDenoOptions): Plugin {
     const extra_import_map = new Map(options.extra_import_map);
