@@ -106,32 +106,49 @@ export interface NPMDataInfo {
     package: NPMPackage;
 }
 
+export interface VirtualInfo {
+    kind: typeof virtualImportKind;
+    specifier: ModuleSpecifier;
+    code: () => Promise<string>;
+}
+
 export class GraphModule {
     readonly specifier: ModuleSpecifier;
     readonly esm_dependencies = new Map<string, GraphModule>();
-    constructor(readonly def: DenoInfoModule | NPMImportInfo | NPMDataInfo, readonly graph: ModuleGraph) {
+    private constructor(
+        readonly def: DenoInfoModule | NPMImportInfo | NPMDataInfo | VirtualInfo,
+        readonly graph: ModuleGraph,
+    ) {
         this.specifier = def.specifier;
+
+        graph.modules.set(this.specifier.href, this);
+
+        this.load();
+    }
+
+    public static new(
+        def: DenoInfoModule | NPMImportInfo | NPMDataInfo | VirtualInfo,
+        graph: ModuleGraph,
+    ): GraphModule {
+        const spec = def.specifier.href;
+        const mod = graph.modules.get(spec) || new GraphModule(def, graph);
+
         if (def.kind === "esm") {
-            for (const $ of def.dependencies) {
-                if ($.code) {
-                    graph.get_module(parseModuleSpecifier($.code.specifier), false).then((mod) => {
-                        if (mod) {
-                            this.esm_dependencies.set($.specifier, mod);
+            for (const dep of def.dependencies) {
+                if (dep.code) {
+                    graph.get_module(parseModuleSpecifier(dep.code.specifier), false).then((dep_mod) => {
+                        if (dep_mod) {
+                            mod.esm_dependencies.set(dep.specifier, dep_mod);
                         }
                     });
                 }
             }
         }
-        graph.modules.set(this.specifier.href, this);
 
-        if (this.specifier.protocol === "file:") {
-            this.code = null;
-        } else {
-            this.code = this.#load();
-        }
+        return mod;
     }
 
-    private code: string | Promise<string> | null;
+    private code: string | Promise<string> | null = null;
 
     async #load() {
         if (this.def.kind === "esm") {
@@ -140,6 +157,8 @@ export class GraphModule {
             return await get_npm_import_link(this.def);
         } else if (this.def.kind === npmDataKind) {
             return await getNPMData(this.def.specifier);
+        } else if (this.def.kind === virtualImportKind) {
+            return await this.def.code();
         }
         throw new Error(`module type ${this.def.kind} unsupported`);
     }
@@ -182,6 +201,13 @@ export class GraphModule {
 
 export class ModuleGraph {
     constructor(readonly o: Opt) {
+        GraphModule.new({
+            kind: virtualImportKind,
+            specifier: parseModuleSpecifier("virtual:node:null"),
+            code() {
+                return Promise.resolve(`throw new Error("<virtual:node:null>");`);
+            },
+        }, this);
     }
 
     #pending: Promise<void> | null = null;
@@ -192,7 +218,6 @@ export class ModuleGraph {
     readonly npm_package_versions = new Map<string, Set<string>>();
 
     async call_deno(root: string) {
-        console.log(`deno info ${root}`);
         const args = ["info", "--json"];
         if (this.o.deno_json) {
             args.push("--config", this.o.deno_json);
@@ -281,15 +306,15 @@ export class ModuleGraph {
             }
         }
 
-        await Promise.all(waitNPM);
-
+        Promise.all(waitNPM).then(() => {
         for (const [_id, pkg] of this.npm_packages) {
             pkg.link();
         }
+        });
 
         for (const mod of modules) {
             if (mod.kind === "esm") {
-                new GraphModule(mod, this);
+                GraphModule.new(mod, this);
             }
         }
     }
@@ -319,7 +344,7 @@ export class ModuleGraph {
                 const pkg = this.npm_packages.get(`${id.name}@${format(id.version)}`);
                 if (pkg) {
                     const spec = await pkg.resolve_import(id.path);
-                    const mod = new GraphModule({
+                    const mod = GraphModule.new({
                         kind: npmImportKind,
                         package: pkg,
                         specifier,
@@ -343,7 +368,7 @@ export class ModuleGraph {
                     );
                     if (probe_res) {
                         const spec = parseModuleSpecifier(`npm-data:${pkg.name}@${format(pkg.version)}/${probe_res}`);
-                        const mod = new GraphModule({
+                        const mod = GraphModule.new({
                             kind: npmDataKind,
                             specifier: spec,
                             package: pkg,
@@ -359,7 +384,7 @@ export class ModuleGraph {
             if (id) {
                 const pkg = this.npm_packages.get(`${id.name}@${format(id.version)}`);
                 if (pkg) {
-                    const mod = new GraphModule({
+                    const mod = GraphModule.new({
                         kind: npmDataKind,
                         specifier,
                         package: pkg,

@@ -20,7 +20,9 @@
     },
     "lint": {
         "rules": {
-            "exclude": []
+            "exclude": [
+                "no-misused-new"
+            ]
         }
     },
     "imports": {
