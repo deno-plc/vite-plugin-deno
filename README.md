@@ -2,7 +2,7 @@
 
 Native Vite support for Deno imports (jsr:, npm:, https://).
 
-Use Deno for the frontend and enjoy development without the hassle of `node_modules`!
+Use Deno for the frontend and enjoy development without the hassle of `node_modules` and package managers!
 
 ## Overview
 
@@ -17,7 +17,7 @@ Use Deno for the frontend and enjoy development without the hassle of `node_modu
 This plugin injects a custom rollup resolver at the earliest stage possible (even before the builtin fs loader) which
 catches nearly every import.
 
-Instead of letting vite resolve the imports the plugin consults the Deno CLI (`deno info --json`). This ensures that all
+Instead of letting Vite resolve the imports the plugin consults the Deno CLI (`deno info --json`). This ensures that all
 imports link to exactly the same files Deno would use (including import mapping).
 
 Additionally the plugin contains a Node.js/NPM compatible resolver (including probing and package.json exports), because
@@ -51,21 +51,6 @@ them in your source code because Deno wont be able to resolve them, but you may 
 - `npm-data:foo@1.2.3/bar.js`: This references an internal file of the package tarball
 - `npm-probe:foo@1.2.3/bar`: Same as above, but with probing. Will be resolved to a `npm-data:` URL
 
-## But I need this one package to be in `node_modules`
-
-There are various reasons why a single dependency has to reside in `node_modules`. The most popular reasons are the
-Babel and PostCSS plugin loaders (they depend on `node_modules` to find the plugins) and dependency pre-bundling.
-
-There are good news: Deno supports `node_modules`!
-
-Read more about [package.json compatibility](https://deno.com/blog/v1.31#packagejson-support) and
-[node_modules compatibility](https://docs.deno.com/runtime/manual/tools/unstable_flags/#--unstable-byonm)
-
-If you have installed a dependency locally you can
-[`exclude`](https://jsr.io/@deno-plc/vite-plugin-deno/doc/~/PluginDenoOptions.exclude) it (reenables the Vite module
-resolution). This might be required for dependencies with _**many**_ files. This plugin currently does no pre-bundling,
-so every file is loaded individually, in case of `lodash-es` this results in ~650 HTTP requests.
-
 ## Usage
 
 Currently only build script configurations are supported because `vite.config.ts` will always be run with Node :-(. It
@@ -74,8 +59,8 @@ is not that complicated as it sounds, you just have to use the JS API of Vite.
 ### `scripts/vite.ts`
 
 ```ts
-import { pluginDeno } from "vite-plugin-deno";
-import { type InlineConfig } from "vite";
+import { pluginDeno } from "@deno-plc/vite-plugin-deno";
+import type { InlineConfig } from "vite";
 
 export const config: InlineConfig = {
     configFile: false, // configuration is inlined here
@@ -155,19 +140,69 @@ resolve packages that are imported by injected code like HMR.
 
 ### `extra_import_map`: `string` => `string`
 
-This import map can be used to polyfill `node:` or do the same as `undeclared_npm_imports` on a more granular level.
+This can be a anything the `Map` constructor supports. (yes, we use a Map for the import map)
+
+This import map can be used to polyfill `node:` (for details see [here](#polyfilling-node)) or do the same as
+`undeclared_npm_imports` on a more granular level.
+
+Sometimes it might be required to add `#standalone` to the replaced import, otherwise you will get errors because the
+replaced import is (of course) not reported by `deno info`. The `#standalone` instructs the plugin to treat the import
+like an independent entrypoint.
 
 ### `exclude`: `(string | RegExp)[]`
 
-Those imports wont be touched.
+Those imports wont be touched. RegExps are preferred (strings are converted to RegExps anyway)
+
+## `node_modules`
+
+This plugin works without `node_modules` most of the time, but in some cases this directory is required to make thins
+work.
+
+There are various reasons why a dependency has to reside in `node_modules`. The most popular reasons are the Babel and
+PostCSS plugin loaders (they depend on `node_modules` to find the plugins) and dependency pre-bundling.
+
+There are good news: Deno supports `node_modules` natively! (= you don't even need Node.js and NPM)
+
+Just create a `package.json` and add items to the dependencies section. The next time Deno runs, it will create a
+`node_modules` dir and symlink all packages to the global deno cache. Now all the plugin resolvers are happy!
+
+Sometimes it might be required to use `node_modules` for a regular dependency of you app. This might be required for
+packages with _**a lot of**_ files (like lodash) or if the package does crazy things with CommonJS (in this case the
+plugin fails to import it, because it is unable to transform it to ESM).
+
+After adding the dependency to the `dependencies` section of `package.json` (do this manually, not using the npm CLI),
+you can [`exclude`](https://jsr.io/@deno-plc/vite-plugin-deno/doc/~/PluginDenoOptions.exclude) it from this plugin. This
+re-enables Vite's module resolution.
+
+## Polyfilling `node:`
+
+This plugin does not automatically polyfill `node:` in browsers, but you can easily do so by setting `extra_import_map`.
+
+Unfortunately most polyfill packages do crazy things with exports (I tested `buffer` and `util`, both didn't worked out
+of the box for different reasons). This is why it is not as straightforward as mapping `node:buffer` to `npm:buffer`
+
+1. Select an appropriate polyfill package (likely on NPM)
+2. Look up its most recent version
+3. link it in `extra_import_map`: `"node:buffer", "https://cdn.jsdelivr.net/npm/buffer@6.0.3/+esm#standalone"`
+
+We use a https:// import to get rid of CommonJS issues, but in the end it is just a Deno remote import (=Deno downloads
+the file, no CDN import)
+
+Make sure to add `#standalone` to the replaced import.
+
+In case you don't want to polyfill a module and instead let the import fail, redirect it to `virtual:node:null`. This
+makes Vite happy but any attempt to load the module will fail with an error (It resolves to a file that just contains a
+`throw` statement). This is useful if a package does feature detection: It tries to dynamically import `node:fs` (or any
+other module), it it succeeds it uses it and if it fails it doesn't do anything filesystem-related.
 
 ## Usage with React
 
 Currently React is unsupported.
 
-1. `react-dom` does some extremely ugly things with cjs exports (like exporting inside an if statement ...). For this
-   reason it cannot be transformed to ESM correctly, but this is not the only problem.
-2. The Deno LSP has problems with React, too. This time it is about missing JSXRuntime types...
+1. The Deno LSP has problems with React. It is about missing JSXRuntime types...
+2. `react-dom` does some extremely ugly things with cjs exports (like exporting inside an if statement ...). For this
+   reason it cannot be transformed to ESM correctly At the same time it needs to be linked by JSX which makes it
+   extremely difficult to use it via the `node_modules` fallback, but this is not the only problem.
 
 I personally only use Preact, so this is not top priority.
 
@@ -179,16 +214,13 @@ If you really need React, please file an issue.
 
 ## Usage with Preact
 
-Although `@preact/preset-vite` works when the respective Babel plugins are installed via NPM/Yarn, I do recommend
-**against** using it.
+Although `@preact/preset-vite` works when the respective Babel plugins are linked via `node_modules`, I do recommend
+_**against**_ using it.
 
-With a few lines of configuration you can set up prefresh (the Preact HMR Engine) and use ESBuild for JSX
-transformation.
+With a only few lines of configuration you can do exactly the same. By the way: this speeds up the development server a
+lot, because it uses ESBuild instead of Babel
 
-By the way: ESBuild is many times faster than Babel and used by Vite to pre-process all files anyway (even if they were
-already handled by Babel)
-
-Just update your Vite config:
+Just update your Vite config to set up prefresh (the Preact HMR Engine) and ESBuild for JSX transformation:
 
 ```typescript
 import { pluginDeno } from "@deno-plc/vite-plugin-deno";
@@ -255,10 +287,11 @@ If you want a lightweight solution, check out
 
 ## FAQ / Known limitations
 
-### New imports are not recognized sometimes
+### React does not work (and maybe more packages that do ugly things with exports)
 
-If you add an import and get an error like `cannot resolve <import> from <...>`, you might need to restart the dev
-server. Most of the time new imports should be recognized automatically.
+See [Usage with React](#usage-with-react)
+
+For other packages it might be required to use the [`node_modules` fallback](#node_modules)
 
 ### Build scripts
 
@@ -267,19 +300,17 @@ The classic `vite.config.ts` file would be executed using Node.js instead of Den
 ### Dependency optimization
 
 Unsupported because dependency optimization relies on `node_modules`. If you really need it (lodash), see
-[`node_modules` section](#but-i-need-this-one-package-to-be-in-node_modules)
+[`node_modules` section](#node_modules)
 
 ### Babel
 
 Some other plugins require Babel and Babel plugins. The Babel plugin loader depends on `node_modules`, see
-[`node_modules` section](#but-i-need-this-one-package-to-be-in-node_modules). In order to get the best DX possible, you
-should avoid Babel based plugins (for most setups Babel isn't really needed, see Usage wit Preact. Using builtin esbuild
-is usually way faster).
+[`node_modules` section](#node_modules). In order to get the best DX possible, you should avoid Babel based plugins (for
+most setups Babel isn't really needed, see Usage wit Preact. Using builtin esbuild is usually way faster).
 
 ### PostCSS/TailwindCSS
 
-`tailwindcss` currently needs to be installed in `node_modules`, see
-[`node_modules` section](#but-i-need-this-one-package-to-be-in-node_modules)
+`tailwindcss` currently needs to be installed in `node_modules`, see [`node_modules` section](#node_modules)
 
 The recommended way is to use Tailwind Play CDN during development and Tailwind CLI for release build.
 
@@ -301,10 +332,6 @@ Deno.stat = (...args) =>
         }
     });
 ```
-
-### React does not work (and maybe more packages that do ugly things with exports)
-
-See [Usage with React](#usage-with-react)
 
 ## Acknowledgements
 
