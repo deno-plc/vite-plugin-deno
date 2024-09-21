@@ -12,6 +12,23 @@ Use Deno for the frontend and enjoy development without the hassle of `node_modu
 
 3. Enjoy development without `node_modules` and package managers
 
+## Project status
+
+`vite-plugin-deno` can be considered 'ready' for standard setups, however in more complex setups or when using NPM
+dependencies that do hacky things, builds might fail.
+
+In this case good knowledge of module resolution is required to troubleshoot these problems. Of course I will assist you
+in this process, feel free to contact [me](https://github.com/hansSchall) via GitHub or Matrix. Please always open an
+Github Issue to help others in the same situation.
+
+_**Short: Nothing fow newbies...**_
+
+I use the plugin on my own for a quite large codebase that includes SSR, multiple frontend builds, server code bundling,
+WebAssembly and a number of commonly used dependencies. This is used as a reference project for testing. While this can
+never be a replacement for unit tests, a real world project is a pretty good testing playground for this kind of
+software and ensures the plugin always works with the latest Deno versions (failing builds are very likely to be noticed
+on my biggest project...).
+
 ## How does this work?
 
 This plugin injects a custom rollup resolver at the earliest stage possible (even before the builtin fs loader) which
@@ -48,7 +65,8 @@ The following imports are only used internally, but you may get in contact with 
 them in your source code because Deno wont be able to resolve them, but you may specify them in
 [`extra_import_map`](https://jsr.io/@deno-plc/vite-plugin-deno/doc/~/PluginDenoOptions.extra_import_map)
 
-- `npm-data:foo@1.2.3/bar.js`: This references an internal file of the package tarball
+- `npm-data:foo@1.2.3/bar.js`: This references an internal file of the package tarball (remember, not all files in an
+  NPM package can be imported from the outside)
 - `npm-probe:foo@1.2.3/bar`: Same as above, but with probing. Will be resolved to a `npm-data:` URL
 
 ## Usage
@@ -188,12 +206,14 @@ of the box for different reasons). This is why it is not as straightforward as m
 We use a https:// import to get rid of CommonJS issues, but in the end it is just a Deno remote import (=Deno downloads
 the file, no CDN import)
 
-Make sure to add `#standalone` to the replaced import.
+Make sure to add [`#standalone`](#extra_import_map-string--string) to the replaced import.
 
-In case you don't want to polyfill a module and instead let the import fail, redirect it to `virtual:node:null`. This
-makes Vite happy but any attempt to load the module will fail with an error (It resolves to a file that just contains a
-`throw` statement). This is useful if a package does feature detection: It tries to dynamically import `node:fs` (or any
-other module), it it succeeds it uses it and if it fails it doesn't do anything filesystem-related.
+In case you don't want to polyfill a module and instead let the import fail, redirect it to `virtual:node:null` (this
+time without `#standalone`). This makes Vite happy but any attempt to load the module will fail with an error (It
+resolves to a file that just contains a `throw` statement). This is useful if a package does feature detection: It tries
+to dynamically import `node:fs` (or any other module), if it succeeds it uses the filesystem and if it fails it simply
+doesn't do anything filesystem-related. This mechanism is used by many packages that use the filesystem when used with
+Node/Deno, but work in browsers, too.
 
 ## Usage with React
 
@@ -201,16 +221,18 @@ Currently React is unsupported.
 
 1. The Deno LSP has problems with React. It is about missing JSXRuntime types...
 2. `react-dom` does some extremely ugly things with cjs exports (like exporting inside an if statement ...). For this
-   reason it cannot be transformed to ESM correctly At the same time it needs to be linked by JSX which makes it
-   extremely difficult to use it via the `node_modules` fallback, but this is not the only problem.
+   reason it cannot be transformed to ESM correctly. At the same time it needs to be linked by JSX which makes it
+   extremely difficult to use it via the `node_modules` fallback.
 
 I personally only use Preact, so this is not top priority.
 
-Until this is supported out of the box you could use the Preact configuration. If you are doing this, all react imports
-are redirected to preact and the whole application is run with the react compatibility layer... (this works without any
-problems 🤯) Read more: https://preactjs.com/guide/v10/switching-to-preact.
+Until this is supported out of the box you could use the [Preact configuration](#usage-with-preact). If you are doing
+this, all react imports are redirected to preact and the whole application is run with the react compatibility layer...
+(this works without any problems 🤯) Read more: https://preactjs.com/guide/v10/switching-to-preact. You do not need to
+care about the bundler setup shown there, the setup [below](#usage-with-preact) already configures everything.
 
-If you really need React, please file an issue.
+If you really need React, please file an issue. This should be a very rare case because the `preact/compat` layer covers
+nearly the whole React API. By the way, Preact is a bit faster than React...
 
 ## Usage with Preact
 
@@ -276,6 +298,8 @@ one import)
 We need the prefresh exclude rule to replicate the internal exclude of all paths containing `node_modules`. Otherwise
 prefresh would inject HMR helpers into libraries and the code that powers HMR, which causes very strange errors.
 
+If you are on Windows, a [little workaround](#denostat-workaround-needed-windows-only) is required.
+
 ## Usage with Deno (Code bundling)
 
 Just set the `env` option to `deno`, everything should work out of the box! (even with `node:` imports)
@@ -291,7 +315,7 @@ If you want a lightweight solution, check out
 
 See [Usage with React](#usage-with-react)
 
-For other packages it might be required to use the [`node_modules` fallback](#node_modules)
+For other packages it might be possible to use the [`node_modules` fallback](#node_modules)
 
 ### Build scripts
 
@@ -302,17 +326,21 @@ The classic `vite.config.ts` file would be executed using Node.js instead of Den
 Unsupported because dependency optimization relies on `node_modules`. If you really need it (lodash), see
 [`node_modules` section](#node_modules)
 
-### Babel
+### Babel/PostCSS
 
-Some other plugins require Babel and Babel plugins. The Babel plugin loader depends on `node_modules`, see
-[`node_modules` section](#node_modules). In order to get the best DX possible, you should avoid Babel based plugins (for
-most setups Babel isn't really needed, see Usage wit Preact. Using builtin esbuild is usually way faster).
+Some other plugins require Babel or PostCSS or one of their plugins. Their plugin loaders depend on `node_modules`, see
+[`node_modules` section](#node_modules).
 
-### PostCSS/TailwindCSS
+In order to get the best DX possible, you should avoid Babel based plugins. For most setups Babel isn't really needed,
+see [Usage wit Preact](#usage-with-preact). Using builtin esbuild is usually many times faster.
 
-`tailwindcss` currently needs to be installed in `node_modules`, see [`node_modules` section](#node_modules)
+### TailwindCSS
 
-The recommended way is to use Tailwind Play CDN during development and Tailwind CLI for release build.
+The `tailwindcss` PostCSS plugin currently needs to be installed in `node_modules`, see
+[`node_modules` section](#node_modules)
+
+The recommended way is to use [Tailwind Play CDN](https://tailwindcss.com/docs/installation/play-cdn) during development
+and the [Tailwind CLI](https://tailwindcss.com/docs/installation) for release build.
 
 ### `Deno.stat` workaround needed (`Windows only`)
 
@@ -320,12 +348,16 @@ Until https://github.com/denoland/deno/issues/24899 has been resolved, you need 
 order to achieve the correct behavior when `node:fs.stat()` is called with an invalid file path. Otherwise you get
 errors like `[vite] Pre-transform error: EINVAL: invalid argument, stat`.
 
+It is recommended to put the following snippet in the Vite config file. This way it is automatically included only if
+necessary.
+
 ```typescript
 const deno_stat = Deno.stat;
 
 Deno.stat = (...args) =>
     deno_stat(...args).catch((err) => {
         if (String(err.message).startsWith(`The filename, directory name, or volume label syntax is incorrect.`)) {
+            // Make sure the path `not-existing` really does not exist :-)
             return Deno.stat("./not-existing");
         } else {
             throw err;

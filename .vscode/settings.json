@@ -2,6 +2,7 @@
     "deno.enable": true,
     "cSpell.words": [
         "compat",
+        "Deno",
         "jsdelivr",
         "lockfiles",
         "polyfilling",
