@@ -240,10 +240,29 @@ export class ModuleGraph {
     }
 
     private async get_deno_info(root: string) {
-        const parsed = DenoInfoOutput.safeParse(await this.call_deno(root));
+        const deno_info = await this.call_deno(root);
+        const parsed = DenoInfoOutput.safeParse(deno_info);
 
         if (!parsed.success) {
-            throw new Error(`invalid output of deno info ${root}`);
+            const partial_parse = z.object({
+                modules: z.object({
+                    error: z.string().optional(),
+                    specifier: z.string().transform(parseModuleSpecifier),
+                }).array(),
+            }).safeParse(deno_info);
+            if (partial_parse.success) {
+                const { modules } = partial_parse.data;
+                const errors: string[] = [];
+                for (const { specifier, error } of modules) {
+                    if (error) {
+                        errors.push(`${specifier}: ${error}`);
+                    }
+                }
+                if (errors.length > 0) {
+                    throw new Error(`failed to look up module graph of ${root}:\n${errors.join("\n")}`);
+                }
+            }
+            throw new Error(`failed to look up module graph of ${root}: Invalid Output:\n ${parsed.error}`);
         }
 
         const { modules, redirects, npmPackages, roots } = parsed.data;
