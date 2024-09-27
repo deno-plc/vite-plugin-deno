@@ -47,7 +47,7 @@ const DenoInfoModule = z.union([
     z.object({
         kind: z.literal("esm"),
         specifier: z.string().transform(parseModuleSpecifier),
-        mediaType: z.enum(["TypeScript", "JavaScript", "TSX"]),
+        mediaType: z.enum(["TypeScript", "JavaScript", "TSX", "Dts"]),
         dependencies: z.object({
             specifier: z.string(),
             type: DenoInfoImport.optional(),
