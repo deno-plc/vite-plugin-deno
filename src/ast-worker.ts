@@ -39,49 +39,53 @@ export interface AstResult {
 }
 
 function run_task(task: AstTask): Omit<AstResult, "task_id"> {
-    if (task.kind === "cjs-to-esm") {
-        const { code, warnings } = transform(
-            task.raw_code,
-            ["commonjs"],
-        );
-        for (const $ of warnings) {
-            if ($.msg === "export can only be at root level") {
-                throw new Error(`Failed to transform to ESM: ${task.id} does UGLY things with Cjs exports.`);
-            } else {
-                console.warn(task.id, $);
+    try {
+        if (task.kind === "cjs-to-esm") {
+            const { code, warnings } = transform(
+                task.raw_code,
+                ["commonjs"],
+            );
+            for (const $ of warnings) {
+                if ($.msg === "export can only be at root level") {
+                    throw new Error(`Failed to transform to ESM: ${task.id} does UGLY things with Cjs exports.`);
+                } else {
+                    console.warn(task.id, $);
+                }
             }
-        }
 
-        return {
-            code,
-        };
-    } else {
-        const ast = parse(task.raw_code, {
-            ecmaVersion: 2023,
-            sourceType: "module",
-        });
+            return {
+                code,
+            };
+        } else {
+            const ast = parse(task.raw_code, {
+                ecmaVersion: 2023,
+                sourceType: "module",
+            });
 
-        let has_default_export = false;
+            let has_default_export = false;
 
-        walk_simple(ast, {
-            ExportDefaultDeclaration(_node) {
-                has_default_export = true;
-            },
-            ExportNamedDeclaration(node) {
-                if (node.specifiers) {
-                    for (const specifier of node.specifiers) {
-                        // @ts-ignore missing typedef
-                        if (specifier.type === "ExportSpecifier" && specifier.exported?.name === "default") {
-                            has_default_export = true;
+            walk_simple(ast, {
+                ExportDefaultDeclaration(_node) {
+                    has_default_export = true;
+                },
+                ExportNamedDeclaration(node) {
+                    if (node.specifiers) {
+                        for (const specifier of node.specifiers) {
+                            // @ts-ignore missing typedef
+                            if (specifier.type === "ExportSpecifier" && specifier.exported?.name === "default") {
+                                has_default_export = true;
+                            }
                         }
                     }
-                }
-            },
-        });
+                },
+            });
 
-        return {
-            has_default_export,
-        };
+            return {
+                has_default_export,
+            };
+        }
+    } catch (err) {
+        throw new Error(`Failed to run task ${task.id}: ${err.message}`);
     }
 }
 
