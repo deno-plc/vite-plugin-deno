@@ -168,7 +168,11 @@ export function pluginDeno(options: PluginDenoOptions): Plugin {
                 return;
             }
 
-            const result = await mod.load();
+            let result = await mod.load();
+
+            if (id.startsWith("http")) {
+                result = result.replace(/\/\/# sourceMappingURL.+/, "");
+            }
 
             return result;
         },
