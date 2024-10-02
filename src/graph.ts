@@ -191,7 +191,7 @@ export class GraphModule {
                 const imp = parseNPMImport(spec);
                 assert(imp);
                 const pkg = this.def.package.dependencies.get(imp.name);
-                assert(pkg, `cannot find dependency ${imp.name} on ${this.def.package.name}`);
+                assert(pkg, `cannot find dependency ${imp.name}(${spec}) on ${this.def.package.name}`);
                 return await this.graph.get_module(await pkg.resolve_import(imp.path));
             }
         } else if (this.def.kind === "esm") {

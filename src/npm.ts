@@ -140,7 +140,7 @@ export class NPMPackage {
             const res = npmResolver.legacy(metadata, {
                 browser: this.graph.o.environment === "browser",
             });
-            assert(typeof res === "string");
+            assert(typeof res === "string", `legacy resolution failed for ${this.name}@${format(this.version)}`);
             return parseModuleSpecifier(join(`npm-probe:${this.name}@${format(this.version)}/`, res));
         }
     }

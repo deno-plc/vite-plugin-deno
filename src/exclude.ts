@@ -42,12 +42,8 @@ export function is_excluded(spec: string, o: Opt): boolean {
     })();
 }
 
-function* cache_info() {
-    for (const [id, excl] of cache) {
-        yield `${excl ? "-" : "+"} ${id}`;
-    }
-}
-
-setTimeout(() => {
-    Deno.writeTextFile("exclude-cache.txt", [...cache_info()].join("\n"));
-}, 10000);
+// function* cache_info() {
+//     for (const [id, excl] of cache) {
+//         yield `${excl ? "-" : "+"} ${id}`;
+//     }
+// }
