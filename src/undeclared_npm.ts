@@ -40,7 +40,7 @@ export function resolve_undeclared_npm(
             graph
                 .call_deno(`npm:${pkg}`)
                 .then(Schema.parse)
-                .then(({ redirects }) => redirects[`npm:${pkg}`].href),
+                .then(({ redirects }) => `${redirects[`npm:${pkg}`].href}#standalone`),
         );
     }
 }
