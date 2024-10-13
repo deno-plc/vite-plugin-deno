@@ -54,7 +54,6 @@ const DenoInfoModule = z.union([
             code: DenoInfoImport.optional(),
         }).array().default([]),
         local: z.string().transform(toFileUrl),
-        emit: z.string().transform(toFileUrl).nullable(),
         size: z.number().int().nonnegative(),
     }),
     z.object({
@@ -286,10 +285,8 @@ export class ModuleGraph {
                 if (this.#npm_extended_id.has(npm_name)) {
                     if (this.#npm_extended_id.get(npm_name) !== extended_id) {
                         throw new Error(
-                            `Expectation failed: underscore version extension differs while processing package '${name}'@'${
-                                format(version)
-                            }' processing '${extended_id}' hit '${
-                                this.#npm_extended_id.get(npm_name)
+                            `Expectation failed: underscore version extension differs while processing package '${name}'@'${format(version)
+                            }' processing '${extended_id}' hit '${this.#npm_extended_id.get(npm_name)
                             }'. Please file an issue: https://github.com/deno-plc/vite-plugin-deno/issues/new`,
                         );
                     }
