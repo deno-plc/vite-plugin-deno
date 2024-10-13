@@ -4,6 +4,8 @@ Native Vite support for Deno imports (jsr:, npm:, https://).
 
 Use Deno for the frontend and enjoy development without the hassle of `node_modules` and package managers!
 
+Note: Versions older than 2.1.7 do not support Deno 2.0. Please update to ^2.1.7!
+
 ## Overview
 
 1. Enable Deno for the whole workspace

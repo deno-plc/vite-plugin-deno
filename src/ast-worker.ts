@@ -85,7 +85,11 @@ function run_task(task: AstTask): Omit<AstResult, "task_id"> {
             };
         }
     } catch (err) {
-        throw new Error(`Failed to run task ${task.id}: ${err.message}`);
+        if (err instanceof Error) {
+            throw new Error(`Failed to run task ${task.id}: ${err.message}`);
+        } else {
+            throw new Error(`Failed to run task ${task.id}: ${err}`);
+        }
     }
 }
 
