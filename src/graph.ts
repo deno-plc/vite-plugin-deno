@@ -352,7 +352,7 @@ export class ModuleGraph {
             return null;
         }
         const spec_ext = specifier.pathname.split(".").pop();
-        if (!supported_extensions.includes(spec_ext!)) {
+        if (spec_ext && /^[a-zA-Z]{1,20}$/.test(spec_ext) && !supported_extensions.includes(spec_ext)) {
             return null;
         }
         if (this.#redirects.has(specifier.href)) {
