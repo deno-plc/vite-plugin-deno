@@ -139,6 +139,8 @@ Include the DOM in the TS compiler options and define the build tasks
 }
 ```
 
+For an example/template see [examples/plain](examples/plain/README.md)
+
 ## Configuration options
 
 [> auto-generated docs](https://jsr.io/@deno-plc/vite-plugin-deno/doc/~/PluginDenoOptions)
@@ -237,6 +239,8 @@ If you really need React, please file an issue. This should be a very rare case 
 nearly the whole React API. By the way, Preact is a bit faster than React...
 
 ## Usage with Preact
+
+For an example/template see [examples/preact](examples/preact/README.md)
 
 Although `@preact/preset-vite` works when the respective Babel plugins are linked via `node_modules`, I do recommend
 _**against**_ using it.
