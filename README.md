@@ -317,6 +317,24 @@ If you want a lightweight solution, check out
 
 ## FAQ / Known limitations
 
+### Asset imports
+
+Importing assets like `import imgUrl from './img.png'` will throw errors, because Deno simply cannot handle such
+imports. Currently it is not even possible to exclude these files :-(
+
+Instead of asset imports you should use `const imgUrl = new URL("/img.png", import.meta.url).href` which provides
+exactly the same functionality while being compatible with Deno.
+
+### CSS imports
+
+Similar to asset imports, CSS imports are vite-only, so Deno complains about them...
+
+**Solution 1:** Import your CSS directly from the HTML
+
+**Solution 2:** Import your CSS fom a JS file that is imported from the HTML, excluded from this plugin and not imported
+from the rest of the JS/TS code (like this one:
+[examples/preact/src/style-import.js](examples/preact/src/style-import.js))
+
 ### React does not work (and maybe more packages that do ugly things with exports)
 
 See [Usage with React](#usage-with-react)
