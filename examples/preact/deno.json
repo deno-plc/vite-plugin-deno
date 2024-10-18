@@ -1,33 +1,29 @@
 {
-    "name": "@deno-plc/vite-plugin-deno",
-    "version": "2.1.8",
-    "exports": "./mod.ts",
+    "tasks": {
+        "dev": "deno run -A scripts/dev.ts",
+        "release": "deno run -A scripts/release.ts"
+    },
+    "nodeModulesDir": "auto",
     "compilerOptions": {
         "lib": [
             "deno.window",
             "deno.ns",
             "ESNext",
+            "DOM",
+            "DOM.Iterable",
+            "DOM.AsyncIterable",
             "webworker"
-        ]
-    },
-    "fmt": {
-        "indentWidth": 4,
-        "lineWidth": 120
-    },
-    "tasks": {
-        "check": "deno fmt && deno lint && deno publish --dry-run --allow-dirty && deno test -A --parallel",
-        "check-ci": "deno fmt --check && deno lint && deno publish --dry-run && deno test -A --parallel"
-    },
-    "lint": {
-        "rules": {
-            "exclude": [
-                "no-misused-new"
-            ]
-        }
+        ],
+        "jsx": "react-jsx",
+        "jsxImportSource": "preact"
     },
     "imports": {
-        "@deno-plc/vite-plugin-deno": "./mod.ts",
         "@coderspirit/nominal": "npm:@coderspirit/nominal@^4.1.1",
+        "@deno-plc/vite-plugin-deno": "../../mod.ts",
+        "@preact/compat": "npm:@preact/compat@^18.3.1",
+        "@prefresh/core": "npm:@prefresh/core@^1.5.2",
+        "@prefresh/utils": "npm:@prefresh/utils@^1.2.0",
+        "@prefresh/vite": "npm:@prefresh/vite@^2.4.6",
         "@std/assert": "jsr:@std/assert@^0.223.0",
         "@std/encoding": "jsr:@std/encoding@^0.223.0",
         "@std/fs": "jsr:@std/fs@^0.223.0",
@@ -36,14 +32,10 @@
         "acorn": "npm:acorn@^8.12.1",
         "acorn-walk": "npm:acorn-walk@^8.3.3",
         "lebab": "npm:lebab@^3.2.4",
+        "preact": "npm:preact@^10.24.3",
         "resolve.exports": "npm:resolve.exports@^2.0.2",
         "validate-npm-package-name": "npm:validate-npm-package-name@^5.0.1",
         "vite": "npm:vite@^5.2.12",
         "zod": "npm:zod@^3.22.5"
-    },
-    "publish": {
-        "exclude": [
-            "examples"
-        ]
     }
 }
