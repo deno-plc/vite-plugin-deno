@@ -1,6 +1,6 @@
 {
     "name": "@deno-plc/vite-plugin-deno",
-    "version": "2.1.8",
+    "version": "2.1.9",
     "exports": "./mod.ts",
     "compilerOptions": {
         "lib": [
