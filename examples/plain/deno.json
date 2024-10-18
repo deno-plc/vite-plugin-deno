@@ -1,0 +1,19 @@
+{
+    "tasks": {
+        "dev": "deno run -A scripts/dev.ts",
+        "release": "deno run -A scripts/release.ts"
+    },
+    "nodeModulesDir": "auto",
+    "compilerOptions": {
+        "lib": [
+            "deno.window",
+            "deno.ns",
+            "ESNext",
+            "DOM",
+            "DOM.Iterable",
+            "DOM.AsyncIterable",
+            "webworker"
+        ]
+    },
+    "importMap": "../../deno.json"
+}

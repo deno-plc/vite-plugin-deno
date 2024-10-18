@@ -43,6 +43,7 @@ export async function resolve(
     may_fetch: boolean = true,
 ): Promise<ModuleSpecifier | null> {
     // console.log(`%c[RESOLVE]        ${id}`, "color:#ff0");
+    // console.log(`%c[REFERRER]       ${referrer}`, "color: gray");
     if (o.extra_import_map.has(id)) {
         return await resolve(o, graph, await o.extra_import_map.get(id)!, referrer, may_fetch);
     }

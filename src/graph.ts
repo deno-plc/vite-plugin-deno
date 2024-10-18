@@ -29,6 +29,7 @@ import { get_npm_import_link, getNPMData, getNPMPath, importProbe, NPMPackage } 
 import { type ModuleSpecifier, parseModuleSpecifier, parseNPMExact, parseNPMImport } from "./specifier.ts";
 import { assert } from "jsr:@std/assert@^0.225.2/assert";
 import { is_excluded } from "./exclude.ts";
+import { supported_extensions } from "./constants.ts";
 
 const DenoInfoPosition = z.object({
     line: z.number().int().nonnegative(),
@@ -348,6 +349,10 @@ export class ModuleGraph {
 
     async get_module(specifier: ModuleSpecifier, may_fetch: boolean = true): Promise<GraphModule | null> {
         if (is_excluded(specifier.href, this.o)) {
+            return null;
+        }
+        const spec_ext = specifier.pathname.split(".").pop();
+        if (!supported_extensions.includes(spec_ext!)) {
             return null;
         }
         if (this.#redirects.has(specifier.href)) {
