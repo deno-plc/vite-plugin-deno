@@ -43,7 +43,7 @@ export async function resolve(
     may_fetch: boolean = true,
 ): Promise<ModuleSpecifier | null> {
     // console.log(`%c[RESOLVE]        ${id}`, "color:#ff0");
-    // console.log(`%c[REFERRER]       ${referrer}`, "color: gray");
+    // console.log(`%c[REFERRER]       ${referrer} (${isAbsolute(referrer || "") ? "" : "!"}abs)`, "color: gray");
     if (o.extra_import_map.has(id)) {
         return await resolve(o, graph, await o.extra_import_map.get(id)!, referrer, may_fetch);
     }
@@ -76,7 +76,7 @@ export async function resolve(
     }
 
     if (referrer_mod) {
-        // console.log(`%c[REFERRER]       ${referrer_mod.specifier.href}`, "color: gray");
+        // console.log(`%c[REFERRER]       ${referrer_mod.specifier.href}`, "color: green");
         const ref = await referrer_mod.resolve_import(id);
         if (ref) {
             return ref.specifier;

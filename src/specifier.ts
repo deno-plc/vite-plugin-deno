@@ -34,6 +34,11 @@ export function parseModuleSpecifier(inp: string | URL): ModuleSpecifier {
     }
     if (url.protocol === "https:") {
         return url as ModuleSpecifier;
+    } else if (url.protocol === "file:") {
+        if (!url.href.startsWith("file:///")) {
+            return new URL(url.href.replace("file://", "file:///")) as ModuleSpecifier;
+        }
+        return url as ModuleSpecifier;
     } else if (url.pathname.startsWith("/")) {
         return new URL(url.href.replace(url.pathname, url.pathname.substring(1))) as ModuleSpecifier;
     } else {
