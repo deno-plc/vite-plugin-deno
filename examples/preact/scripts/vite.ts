@@ -5,7 +5,7 @@ import type { InlineConfig, Plugin } from "vite";
 export const config: InlineConfig = {
     configFile: false, // configuration is inlined here
     server: {
-        port: 80,
+        port: 8000,
     },
     plugins: [
         pluginDeno({
