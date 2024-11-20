@@ -12,7 +12,10 @@
     },
     "fmt": {
         "indentWidth": 4,
-        "lineWidth": 120
+        "lineWidth": 120,
+        "exclude": [
+            "examples/**/dist/**"
+        ]
     },
     "tasks": {
         "check": "deno fmt && deno lint && deno publish --dry-run --allow-dirty && deno test -A --parallel",
@@ -23,7 +26,10 @@
             "exclude": [
                 "no-misused-new"
             ]
-        }
+        },
+        "exclude": [
+            "examples/**/dist/**"
+        ]
     },
     "imports": {
         "@deno-plc/vite-plugin-deno": "./mod.ts",
