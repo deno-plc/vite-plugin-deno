@@ -4,8 +4,6 @@ Native Vite support for Deno imports (jsr:, npm:, https://).
 
 Use Deno for the frontend and enjoy development without the hassle of `node_modules` and package managers!
 
-Note: Versions older than 2.1.7 do not support Deno 2.0. Please update to ^2.1.7!
-
 ## Overview
 
 1. Enable Deno for the whole workspace
@@ -24,6 +22,9 @@ in this process, feel free to contact [me](https://github.com/hansSchall) via Gi
 Github Issue to help others in the same situation.
 
 _**Short: Nothing fow newbies...**_
+
+Please read the [FAQ / Known limitations](#faq--known-limitations) section first and make sure you are not using
+anything that is described as incompatible there.
 
 I use the plugin on my own for a quite large codebase that includes SSR, multiple frontend builds, server code bundling,
 WebAssembly and a number of commonly used dependencies. This is used as a reference project for testing. While this can
@@ -177,7 +178,7 @@ Those imports wont be touched. RegExps are preferred (strings are converted to R
 
 ## `node_modules`
 
-This plugin works without `node_modules` most of the time, but in some cases this directory is required to make thins
+This plugin works without `node_modules` most of the time, but in some cases this directory is required to make things
 work.
 
 There are various reasons why a dependency has to reside in `node_modules`. The most popular reasons are the Babel and
@@ -335,6 +336,11 @@ Similar to asset imports, CSS imports are vite-only, so Deno complains about the
 from the rest of the JS/TS code (like this one:
 [examples/preact/src/style-import.js](examples/preact/src/style-import.js))
 
+### Fullstack Frameworks
+
+Fullstack frameworks are most likely incompatible with this / Deno. They are unhappy with swapping out internal parts in
+general, especially when it affects a fundamental thing like module resolution. Additionally most of them use React.
+
 ### React does not work (and maybe more packages that do ugly things with exports)
 
 See [Usage with React](#usage-with-react)
@@ -366,28 +372,14 @@ The `tailwindcss` PostCSS plugin currently needs to be installed in `node_module
 The recommended way is to use [Tailwind Play CDN](https://tailwindcss.com/docs/installation/play-cdn) during development
 and the [Tailwind CLI](https://tailwindcss.com/docs/installation) for release build.
 
-### `Deno.stat` workaround needed (`Windows only`)
+### `Deno.stat` workaround is not needed anymore
 
-Until https://github.com/denoland/deno/issues/24899 has been resolved, you need to include the following snippet in
-order to achieve the correct behavior when `node:fs.stat()` is called with an invalid file path. Otherwise you get
-errors like `[vite] Pre-transform error: EINVAL: invalid argument, stat`.
+The issue has been fixed by Deno. In case you use an old Deno version (1.x and early 2.x) read about it
+[here](https://github.com/deno-plc/vite-plugin-deno/tree/c917814f5b4cf0fdcbfcd9a09772fe6644e24cb0?tab=readme-ov-file#denostat-workaround-needed-windows-only)
 
-It is recommended to put the following snippet in the Vite config file. This way it is automatically included only if
-necessary.
+### Deno 2.x
 
-```typescript
-const deno_stat = Deno.stat;
-
-Deno.stat = (...args) =>
-    deno_stat(...args).catch((err) => {
-        if (String(err.message).startsWith(`The filename, directory name, or volume label syntax is incorrect.`)) {
-            // Make sure the path `not-existing` really does not exist :-)
-            return Deno.stat("./not-existing");
-        } else {
-            throw err;
-        }
-    });
-```
+Versions older than 2.1.7 do not support Deno 2.0.
 
 ## Acknowledgements
 
