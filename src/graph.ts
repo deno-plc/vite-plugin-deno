@@ -359,6 +359,12 @@ export class ModuleGraph {
             // console.log(`redirecting ${specifier}`);
             return await this.get_module(this.#redirects.get(specifier.href)!, may_fetch);
         }
+        if (this.o.extra_import_map.has(specifier.href)) {
+            return await this.get_module(
+                parseModuleSpecifier(await this.o.extra_import_map.get(specifier.href)!),
+                may_fetch,
+            );
+        }
         if (this.modules.has(specifier.href)) {
             return this.modules.get(specifier.href)!;
         }
