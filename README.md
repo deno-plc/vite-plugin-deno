@@ -142,9 +142,9 @@ Include the DOM in the TS compiler options and define the build tasks
 
 For an example/template see [examples/plain](examples/plain/README.md)
 
-## Configuration options
+## Configuration options (Overview)
 
-[> auto-generated docs](https://jsr.io/@deno-plc/vite-plugin-deno/doc/~/PluginDenoOptions)
+[> for a full version visit the JSR Docs](https://jsr.io/@deno-plc/vite-plugin-deno/doc/~/PluginDenoOptions)
 
 ### `deno_json` and `deno_lock`
 
@@ -174,28 +174,28 @@ like an independent entrypoint.
 
 ### `exclude`: `(string | RegExp)[]`
 
-Those imports wont be touched. RegExps are preferred (strings are converted to RegExps anyway)
+Those imports wont be touched. RegExps are preferred (strings are converted to RegExps anyway). Note: Deno still checks
+these imports so make sure they are valid anyway.
+
+### `legacy_npm`: `string[]`
+
+These npm packages are left over to Vite
 
 ## `node_modules`
 
 This plugin works without `node_modules` most of the time, but in some cases this directory is required to make things
 work.
 
-There are various reasons why a dependency has to reside in `node_modules`. The most popular reasons are the Babel and
-PostCSS plugin loaders (they depend on `node_modules` to find the plugins) and dependency pre-bundling.
+There are various reasons why a dependency has to reside in `node_modules`. Some dependencies like `@xterm/xterm` do
+ugly things with their exports (like exporting inside if-blocks), so it is impossible for this plugin to transform them
+to ESM. In this case we let Vite do it using plain old `node_modules` instead.
 
-There are good news: Deno supports `node_modules` natively! (= you don't even need Node.js and NPM)
+There are good news: Deno supports `node_modules` natively! (= you don't even need Node.js and NPM) Just set
+`"nodeModulesDir": "auto",` in your `deno.json` and add the respective dependency to the `legacy_npm` option of this
+plugin.
 
-Just create a `package.json` and add items to the dependencies section. The next time Deno runs, it will create a
-`node_modules` dir and symlink all packages to the global deno cache. Now all the plugin resolvers are happy!
-
-Sometimes it might be required to use `node_modules` for a regular dependency of you app. This might be required for
-packages with _**a lot of**_ files (like lodash) or if the package does crazy things with CommonJS (in this case the
-plugin fails to import it, because it is unable to transform it to ESM).
-
-After adding the dependency to the `dependencies` section of `package.json` (do this manually, not using the npm CLI),
-you can [`exclude`](https://jsr.io/@deno-plc/vite-plugin-deno/doc/~/PluginDenoOptions.exclude) it from this plugin. This
-re-enables Vite's module resolution.
+Don't worry about the `node_modules` folder, it only contains symlinks to the global cache!
+[Read more](https://deno.com/blog/your-new-js-package-manager)
 
 ## Polyfilling `node:`
 
