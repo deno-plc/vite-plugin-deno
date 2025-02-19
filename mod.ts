@@ -250,12 +250,13 @@ export function pluginDeno(options: PluginDenoOptions): PluginOption {
             const last_file_update = last_update.get(ctx.file);
             last_update.set(ctx.file, ctx.timestamp);
 
-            if (last_file_update && last_file_update > (ctx.timestamp + (options.hot_update_min_time ?? 0))) {
-                o.logger.error(`skipping HMR update for {file}`, {
+            if (last_file_update && (ctx.timestamp - last_file_update) < (options.hot_update_min_time ?? 0)) {
+                o.logger.error(`skipping HMR update for {file}, too early (d={diff})`, {
                     file: ctx.file,
                     last_update: last_file_update,
                     timestamp: ctx.timestamp,
                     hot_update_min_time: options.hot_update_min_time,
+                    diff: ctx.timestamp - last_file_update,
                 });
                 return [];
             }
