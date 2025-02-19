@@ -3,7 +3,7 @@
  *
  * vite-plugin-deno
  *
- * Copyright (C) 2024 Hans Schallmoser
+ * Copyright (C) 2024 - 2025 Hans Schallmoser
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -29,6 +29,7 @@ import * as npmResolver from "resolve.exports";
 import { assert } from "jsr:@std/assert@^0.225.2/assert";
 import { type ModuleSpecifier, parseModuleSpecifier, parseNPMExact } from "./specifier.ts";
 import { has_default_export, toESM } from "./ast-ops.ts";
+import type { Opt } from "./options.ts";
 
 export const PackageJSON = z.object({
     name: z.string(),
@@ -148,31 +149,31 @@ export class NPMPackage {
 
 const npm_data_transform_cache = new Map<string, string | Promise<string>>();
 
-export async function getNPMData(specifier: ModuleSpecifier) {
+export async function getNPMData(o: Opt, specifier: ModuleSpecifier) {
     if (npm_data_transform_cache.has(specifier.href)) {
         return npm_data_transform_cache.get(specifier.href)!;
     }
 
-    const pr = getNPMDataInner(specifier);
+    const pr = getNPMDataInner(o, specifier);
     npm_data_transform_cache.set(specifier.href, pr);
     const code = await pr;
     npm_data_transform_cache.set(specifier.href, code);
     return code;
 }
 
-async function getNPMDataInner(specifier: ModuleSpecifier) {
+async function getNPMDataInner(o: Opt, specifier: ModuleSpecifier) {
     const id = parseNPMExact(specifier.pathname);
     assert(id);
     const raw_code = await Deno.readTextFile(join(await getNPMPath(id.name, id.version), id.path));
-    let code = await toESM(raw_code, specifier.href);
+    let code = await toESM(o, raw_code, specifier.href);
     code = code.replace(/\/\/# sourceMappingURL.+/, ""); // TODO resolve source map url
     return code;
 }
 
-export async function get_npm_import_link(info: NPMImportInfo): Promise<string> {
-    const importedCode = await getNPMData(info.module);
+export async function get_npm_import_link(o: Opt, info: NPMImportInfo): Promise<string> {
+    const importedCode = await getNPMData(o, info.module);
 
-    if (await has_default_export(importedCode, info.specifier.href)) {
+    if (await has_default_export(o, importedCode, info.specifier.href)) {
         return `
 // npm:${info.package.name}@${format(info.package.version)}
 

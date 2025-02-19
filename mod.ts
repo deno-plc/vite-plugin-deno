@@ -3,7 +3,7 @@
  *
  * vite-plugin-deno
  *
- * Copyright (C) 2024 Hans Schallmoser
+ * Copyright (C) 2024 - 2025 Hans Schallmoser
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -21,12 +21,14 @@
  * USA or see <https://www.gnu.org/licenses/>.
  */
 
-import type { Plugin } from "vite";
+import type { HmrContext, PluginOption } from "vite";
 import type { Opt } from "./src/options.ts";
 import { ModuleGraph } from "./src/graph.ts";
 import { decodeSpec, encodeSpec, resolve } from "./src/resolve.ts";
 import { resolve_undeclared_npm } from "./src/undeclared_npm.ts";
 import { is_excluded } from "./src/exclude.ts";
+import { getLogger } from "@logtape/logtape";
+import { Ray } from "./src/ray.ts";
 
 /**
  * Plugin configuration
@@ -58,6 +60,11 @@ export interface PluginDenoOptions {
     undeclared_npm_imports?: string[];
 
     /**
+     * Those npm dependencies are left over to vite for resolution. This requires a `node_nodules` folder (like the symlinked one deno generates)
+     */
+    legacy_npm?: string[];
+
+    /**
      * import map that is only applied to build module resolution.
      *
      * Useful for polyfilling `node:` and handling injected imports (JSX runtime, HMR, ...)
@@ -82,14 +89,27 @@ export interface PluginDenoOptions {
      * The RegExps should not be too expensive to check
      */
     exclude?: (string | RegExp)[];
+
+    /**
+     * @logtape/logtape logger id
+     * @default "vite-plugin-deno"
+     */
+    log_id?: string;
+
+    /**
+     * Minimum time in milliseconds between hot updates, see Issue #5
+     * @default 0
+     */
+    hot_update_min_time?: number;
 }
 
 /**
  * see {@link PluginDenoOptions}
  */
-export function pluginDeno(options: PluginDenoOptions): Plugin {
+export function pluginDeno(options: PluginDenoOptions): PluginOption {
     const extra_import_map = new Map(options.extra_import_map);
     const o: Opt = {
+        logger: getLogger(options.log_id ?? "vite-plugin-deno"),
         deno_json: options.deno_json,
         deno_lock: options.deno_lock,
         extra_import_map,
@@ -104,7 +124,10 @@ export function pluginDeno(options: PluginDenoOptions): Plugin {
                 }
             }) ?? [],
         ],
+        legacy_npm: options.legacy_npm ?? [],
     };
+
+    const legacy_npm_regex = new RegExp(`"npm:(${o.legacy_npm.join("|")})(@.+)"`, "g");
 
     if (o.environment === "deno") {
         o.exclude.push(/^node:/);
@@ -119,6 +142,7 @@ export function pluginDeno(options: PluginDenoOptions): Plugin {
     resolve_undeclared_npm(options.undeclared_npm_imports ?? [], graph, extra_import_map);
 
     return {
+        // @ts-ignore some of the Plugin type definitions do not include name
         name: "vite-plugin-deno",
         enforce: "pre",
         config() {
@@ -134,47 +158,109 @@ export function pluginDeno(options: PluginDenoOptions): Plugin {
         },
         resolveId: {
             order: "pre",
-            async handler(id, referrer) {
-                id = decodeSpec(id);
-                referrer = referrer && decodeSpec(referrer);
+            async handler(raw_id: string, raw_referrer: string | undefined) {
+                const start = performance.now();
+                const id = decodeSpec(raw_id);
+                const referrer = raw_referrer && decodeSpec(raw_referrer);
+
+                o.logger.debug(
+                    `Resolve module {id}${id !== raw_id ? `({raw_id})` : ""} from {referrer}${
+                        referrer !== raw_referrer ? `({raw_referrer})` : ""
+                    }`,
+                    {
+                        id,
+                        raw_id,
+                        referrer,
+                        raw_referrer,
+                    },
+                );
+
+                const ray = new Ray(id, referrer ?? "");
 
                 if (id.endsWith(".html")) {
                     return null;
                 }
 
                 if (is_excluded(id, o)) {
+                    o.logger.debug(`skipping (excluded specifier) {id}`, { ...ray });
                     return null;
                 }
 
                 if (referrer && is_excluded(referrer, o)) {
+                    o.logger.debug(`skipping (excluded referrer) {id} from {referrer}`, { ...ray });
                     return null;
                 }
 
-                const resolved = await resolve(o, graph, id, referrer);
+                if (o.legacy_npm.includes(id)) {
+                    o.logger.info(`skipping (legacy npm) {id}`, { ...ray });
+                    return null;
+                }
+
+                const resolved = await resolve(o, ray, graph, id, referrer);
 
                 if (resolved) {
-                    return encodeSpec(resolved);
+                    o.logger.debug(`resolved {id} from {referrer} to {resolved} ({duration}ms)`, {
+                        ...ray,
+                        resolved: resolved.href,
+                        duration: performance.now() - start,
+                    });
+                    const encoded = encodeSpec(resolved);
+
+                    if (resolved.protocol === "file:" && referrer?.startsWith("file://")) {
+                        o.logger.debug(`resolved file specifier {id} from {referrer} to {resolved} ({duration}ms)`, {
+                            ...ray,
+                            resolved: resolved.href,
+                            duration: performance.now() - start,
+                        });
+                        return null;
+                    }
+
+                    return encoded;
                 } else {
                     return null;
                 }
             },
         },
-        async load(id) {
-            id = decodeSpec(id);
+        async load(raw_id: string) {
+            const id = decodeSpec(raw_id);
+            // const id = decodeURIComponent(raw_id);
+            o.logger.debug(`Loading module {id}({raw_id})`, { id, raw_id });
 
             const mod = graph.get_resolved(id);
 
             if (!mod) {
+                o.logger.warn(`[loader] failed to resolve {id}`, { id });
                 return;
             }
 
             let result = await mod.load();
 
+            result = result.replaceAll(legacy_npm_regex, (_, package_name) => `"${package_name}"`);
+
             if (id.startsWith("http")) {
                 result = result.replace(/\/\/# sourceMappingURL.+/, "");
             }
 
+            o.logger.debug(`loaded {id}`, { id });
+
             return result;
+        },
+        handleHotUpdate(ctx: HmrContext) {
+            // console.log({ ...ctx, server: undefined, read: undefined, modules: undefined });
+            const last_file_update = last_update.get(ctx.file);
+            last_update.set(ctx.file, ctx.timestamp);
+
+            if (last_file_update && last_file_update > (ctx.timestamp + (options.hot_update_min_time ?? 0))) {
+                o.logger.error(`skipping HMR update for {file}`, {
+                    file: ctx.file,
+                    last_update: last_file_update,
+                    timestamp: ctx.timestamp,
+                    hot_update_min_time: options.hot_update_min_time,
+                });
+                return [];
+            }
         },
     };
 }
+
+const last_update = new Map<string, number>();

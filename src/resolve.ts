@@ -3,7 +3,7 @@
  *
  * vite-plugin-deno
  *
- * Copyright (C) 2024 Hans Schallmoser
+ * Copyright (C) 2024 - 2025 Hans Schallmoser
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -21,10 +21,11 @@
  * USA or see <https://www.gnu.org/licenses/>.
  */
 
-import { fromFileUrl, isAbsolute, join, toFileUrl } from "@std/path";
+import { fromFileUrl, isAbsolute, join, normalize, toFileUrl } from "@std/path";
 import type { ModuleGraph } from "./graph.ts";
 import { type ModuleSpecifier, parseModuleSpecifier, parseNPMImport } from "./specifier.ts";
 import type { Opt } from "./options.ts";
+import type { Ray } from "./ray.ts";
 
 async function exists(path: string): Promise<boolean> {
     try {
@@ -37,6 +38,7 @@ async function exists(path: string): Promise<boolean> {
 
 export async function resolve(
     o: Opt,
+    ray: Ray,
     graph: ModuleGraph,
     id: string,
     referrer?: string,
@@ -45,7 +47,7 @@ export async function resolve(
     // console.log(`%c[RESOLVE]        ${id}`, "color:#ff0");
     // console.log(`%c[REFERRER]       ${referrer} (${isAbsolute(referrer || "") ? "" : "!"}abs)`, "color: gray");
     if (o.extra_import_map.has(id)) {
-        return await resolve(o, graph, await o.extra_import_map.get(id)!, referrer, may_fetch);
+        return await resolve(o, ray, graph, await o.extra_import_map.get(id)!, referrer, may_fetch);
     }
 
     if (referrer === undefined) {
@@ -84,7 +86,7 @@ export async function resolve(
             if (!id.startsWith("npm")) {
                 if (may_fetch) {
                     await graph.update_info(referrer_mod.specifier);
-                    return await resolve(o, graph, id, referrer, false);
+                    return await resolve(o, ray, graph, id, referrer, false);
                 } else {
                     throw new Error(`cannot resolve '${id}' from ${referrer_mod.specifier.href}`);
                 }
@@ -152,8 +154,9 @@ export function encodeSpec(spec: ModuleSpecifier) {
 }
 
 export function decodeSpec(spec: string) {
-    if (fs_remap.has(spec)) {
-        return fs_remap.get(spec)!.href;
+    const normalized = normalize(spec);
+    if (fs_remap.has(normalized)) {
+        return fs_remap.get(normalized)!.href;
     }
     return decodeURIComponent(spec);
 }

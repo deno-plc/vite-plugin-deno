@@ -3,7 +3,7 @@
  *
  * vite-plugin-deno
  *
- * Copyright (C) 2024 Hans Schallmoser
+ * Copyright (C) 2024 - 2025 Hans Schallmoser
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -125,7 +125,7 @@ export class GraphModule {
 
         graph.modules.set(this.specifier.href, this);
 
-        this.load();
+        // this.load();
     }
 
     public static new(
@@ -156,9 +156,9 @@ export class GraphModule {
         if (this.def.kind === "esm") {
             return await Deno.readTextFile(this.def.local);
         } else if (this.def.kind === npmImportKind) {
-            return await get_npm_import_link(this.def);
+            return await get_npm_import_link(this.graph.o, this.def);
         } else if (this.def.kind === npmDataKind) {
-            return await getNPMData(this.def.specifier);
+            return await getNPMData(this.graph.o, this.def.specifier);
         } else if (this.def.kind === virtualImportKind) {
             return await this.def.code();
         }
@@ -228,6 +228,7 @@ export class ModuleGraph {
             args.push("--lock", this.o.deno_lock);
         }
         args.push(root);
+        const start = performance.now();
         const info = new Deno.Command(Deno.execPath(), {
             args,
             env: { DENO_NO_PACKAGE_JSON: "true" },
@@ -235,7 +236,13 @@ export class ModuleGraph {
             stderr: "inherit",
         });
 
-        const data = JSON.parse(new TextDecoder().decode((await info.output()).stdout));
+        const output = await info.output();
+        const duration = performance.now() - start;
+        this.o.logger.info(`deno info {root} took {duration}ms`, {
+            root,
+            duration,
+        });
+        const data = JSON.parse(new TextDecoder().decode(output.stdout));
         return data;
     }
 

@@ -23,10 +23,23 @@
 
 import { assert } from "@std/assert";
 import { has_default_export } from "./ast-ops.ts";
+import type { Opt } from "./options.ts";
+import { getLogger } from "@logtape/logtape";
+
+const o: Opt = {
+    deno_json: "",
+    deno_lock: "",
+    extra_import_map: new Map(),
+    environment: "deno",
+    exclude: [],
+    legacy_npm: [],
+    logger: getLogger("vite-plugin-deno/test"),
+};
 
 Deno.test("has default export", async () => {
-    assert(await has_default_export(`export default function foo(){}`) === true);
-    assert(await has_default_export(`function foo(){}\n export {foo as default};`) === true);
-    assert(await has_default_export(`// export default`) === false);
-    assert(await has_default_export(`// export {foo as default}`) === false);
+    assert(await has_default_export(o, `export default function foo(){}`) === true);
+    assert(await has_default_export(o, `function foo(){}\n export {foo as default};`) === true);
+    assert(await has_default_export(o, `// export default`) === false);
+    assert(await has_default_export(o, `/*\nexport default\n*/`) === false);
+    assert(await has_default_export(o, `// export {foo as default}`) === false);
 });

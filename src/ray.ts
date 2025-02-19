@@ -3,7 +3,7 @@
  *
  * vite-plugin-deno
  *
- * Copyright (C) 2024 - 2025 Hans Schallmoser
+ * Copyright (C) 2025 Hans Schallmoser
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -21,14 +21,7 @@
  * USA or see <https://www.gnu.org/licenses/>.
  */
 
-import type { Logger } from "@logtape/logtape";
-
-export interface Opt {
-    deno_json?: string;
-    deno_lock?: string;
-    extra_import_map: Map<string, string | Promise<string>>;
-    environment: "deno" | "browser";
-    exclude: RegExp[];
-    legacy_npm: string[];
-    logger: Logger;
+export class Ray {
+    constructor(readonly id: string, readonly referrer: string) {
+    }
 }

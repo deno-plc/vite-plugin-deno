@@ -3,7 +3,7 @@
  *
  * vite-plugin-deno
  *
- * Copyright (C) 2024 Hans Schallmoser
+ * Copyright (C) 2024 - 2025 Hans Schallmoser
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -23,6 +23,7 @@
 
 import type { AstResult, AstTask } from "./ast-worker.ts";
 import { assert } from "@std/assert/assert";
+import type { Opt } from "./options.ts";
 
 export class WorkerPool {
     constructor(readonly concurrency: number) {
@@ -35,6 +36,7 @@ export class WorkerPool {
     #spawn_worker() {
         const worker = new Worker(new URL("./ast-worker.ts", import.meta.url), {
             type: "module",
+            name: `ast-worker-${this.#pool.length}`,
         });
         worker.addEventListener("message", (ev) => {
             const result = ev.data as AstResult;
@@ -56,20 +58,21 @@ export class WorkerPool {
     #free_pool: Worker[] = [];
     #waiting: ((worker: Worker) => void)[] = [];
     #listener = new Map<number, (res: AstResult) => void>();
-    #run_task(task: AstTask, worker: Worker): Promise<AstResult> {
+    #run_task(o: Opt, task: AstTask, worker: Worker): Promise<AstResult> {
+        o.logger.debug(`running AST operation {kind} {id}`, { ...task });
         return new Promise((resolve) => {
             this.#listener.set(task.task_id, resolve);
             worker.postMessage(task);
         });
     }
-    public run(task: AstTask): Promise<AstResult> {
+    public run(o: Opt, task: AstTask): Promise<AstResult> {
         const worker = this.#free_pool.shift();
         if (worker) {
-            return this.#run_task(task, worker);
+            return this.#run_task(o, task, worker);
         } else {
             return new Promise((resolve) => {
                 this.#waiting.push((worker) => {
-                    this.#run_task(task, worker).then(resolve);
+                    this.#run_task(o, task, worker).then(resolve);
                 });
             });
         }

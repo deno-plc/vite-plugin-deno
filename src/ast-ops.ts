@@ -3,7 +3,7 @@
  *
  * vite-plugin-deno
  *
- * Copyright (C) 2024 Hans Schallmoser
+ * Copyright (C) 2024 - 2025 Hans Schallmoser
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -22,12 +22,13 @@
  */
 
 import { WorkerPool } from "./ast-pool.ts";
+import type { Opt } from "./options.ts";
 
 const pool = new WorkerPool(navigator.hardwareConcurrency ?? 4);
 
-export async function toESM(raw_code: string, id: string) {
+export async function toESM(o: Opt, raw_code: string, id: string) {
     if (raw_code.includes("require") || raw_code.includes("module")) {
-        return (await pool.run({
+        return (await pool.run(o, {
             task_id: pool.get_task_id(),
             kind: "cjs-to-esm",
             id,
@@ -40,7 +41,7 @@ export async function toESM(raw_code: string, id: string) {
 
 const default_export_cache = new Map<string, Promise<boolean> | boolean>();
 
-export async function has_default_export(code: string, id: string = code): Promise<boolean> {
+export async function has_default_export(o: Opt, code: string, id: string = code): Promise<boolean> {
     if (default_export_cache.has(id)) {
         return default_export_cache.get(id)!;
     }
@@ -50,7 +51,7 @@ export async function has_default_export(code: string, id: string = code): Promi
     }
 
     const pr = (async () =>
-        (await pool.run({
+        (await pool.run(o, {
             task_id: pool.get_task_id(),
             kind: "default-exports",
             id,
