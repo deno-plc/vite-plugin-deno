@@ -206,14 +206,17 @@ export function pluginDeno(options: PluginDenoOptions): PluginOption {
                     });
                     const encoded = encodeSpec(resolved);
 
-                    if (resolved.protocol === "file:" && referrer?.startsWith("file://")) {
-                        o.logger.debug(`resolved file specifier {id} from {referrer} to {resolved} ({duration}ms)`, {
-                            ...ray,
-                            resolved: resolved.href,
-                            duration: performance.now() - start,
-                        });
-                        return null;
-                    }
+                    /**
+                     * Does not work with workspaces, because workspace imports would be skipped
+                     */
+                    // if (resolved.protocol === "file:" && referrer?.startsWith("file://")) {
+                    //     o.logger.debug(`resolved file specifier {id} from {referrer} to {resolved} ({duration}ms)`, {
+                    //         ...ray,
+                    //         resolved: resolved.href,
+                    //         duration: performance.now() - start,
+                    //     });
+                    // return null;
+                    // }
 
                     return encoded;
                 } else {
