@@ -244,6 +244,10 @@ export function pluginDeno(options: PluginDenoOptions): PluginOption {
                 result = result.replace(/\/\/# sourceMappingURL.+/, "");
             }
 
+            if (id.endsWith(".tsx")) {
+                result = result.replaceAll(/\/\*\* \@jsx.+\*\//g, "");
+            }
+
             o.logger.debug(`loaded {id}`, { id });
 
             return result;
