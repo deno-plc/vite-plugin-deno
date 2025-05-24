@@ -289,30 +289,32 @@ export class ModuleGraph {
 
             const npm_name = `${name}@${format(version)}`;
 
-            {
-                if (this.#npm_extended_id.has(npm_name)) {
-                    if (this.#npm_extended_id.get(npm_name) !== extended_id) {
-                        throw new Error(
-                            `Expectation failed: underscore version extension differs while processing package '${name}'@'${
-                                format(version)
-                            }' processing '${extended_id}' hit '${
-                                this.#npm_extended_id.get(npm_name)
-                            }'. Please file an issue: https://github.com/deno-plc/vite-plugin-deno/issues/new`,
-                        );
-                    }
-                } else {
-                    this.#npm_extended_id.set(npm_name, extended_id);
-                }
+            // {
+            //     if (this.#npm_extended_id.has(npm_name)) {
+            //         if (this.#npm_extended_id.get(npm_name) !== extended_id) {
+            //             throw new Error(
+            //                 `Expectation failed: underscore version extension differs while processing package '${name}'@'${
+            //                     format(version)
+            //                 }' processing '${extended_id}' hit '${
+            //                     this.#npm_extended_id.get(npm_name)
+            //                 }'. Please file an issue: https://github.com/deno-plc/vite-plugin-deno/issues/new`,
+            //             );
+            //         }
+            //     } else {
+            //         this.#npm_extended_id.set(npm_name, extended_id);
+            //     }
+            // }
+
+            const specifier = parseModuleSpecifier(`npm:${npm_name}`);
+            if (npm_name !== extended_id) {
+                this.#redirects.set(parseModuleSpecifier(`npm:${extended_id}`).href, specifier);
             }
 
             if (this.npm_packages.has(npm_name)) {
+                if (!this.npm_packages.has(extended_id)) {
+                    this.npm_packages.set(extended_id, this.npm_packages.get(npm_name)!);
+                }
                 continue;
-            }
-
-            const specifier = parseModuleSpecifier(`npm:${npm_name}`);
-
-            if (npm_name !== extended_id) {
-                this.#redirects.set(parseModuleSpecifier(`npm:${extended_id}`).href, specifier);
             }
 
             const pkg = new NPMPackage(name, version, dependencies, this);
