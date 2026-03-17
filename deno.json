@@ -46,11 +46,14 @@
         "resolve.exports": "npm:resolve.exports@^2.0.2",
         "validate-npm-package-name": "npm:validate-npm-package-name@^5.0.1",
         "vite": "npm:vite@^6.1.1",
-        "zod": "npm:zod@^3.22.5"
+        "zod": "npm:zod@^4.3.6"
     },
     "publish": {
         "exclude": [
             "examples"
         ]
-    }
+    },
+    "exclude": [
+        "examples"
+    ]
 }

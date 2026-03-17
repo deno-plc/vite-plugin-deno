@@ -26,7 +26,7 @@ import { fromFileUrl, join, toFileUrl } from "@std/path";
 import { z } from "zod";
 import type { ModuleGraph, NPMImportInfo } from "./graph.ts";
 import * as npmResolver from "resolve.exports";
-import { assert } from "jsr:@std/assert@^0.225.2/assert";
+import { assert } from "@std/assert/assert";
 import { type ModuleSpecifier, parseModuleSpecifier, parseNPMExact } from "./specifier.ts";
 import { has_default_export, toESM } from "./ast-ops.ts";
 import type { Opt } from "./options.ts";

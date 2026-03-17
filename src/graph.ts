@@ -3,7 +3,7 @@
  *
  * vite-plugin-deno
  *
- * Copyright (C) 2024 - 2025 Hans Schallmoser
+ * Copyright (C) 2024 - 2026 Hans Schallmoser
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -27,7 +27,7 @@ import type { Opt } from "./options.ts";
 import { format, parse } from "@std/semver";
 import { get_npm_import_link, getNPMData, getNPMPath, importProbe, NPMPackage } from "./npm.ts";
 import { type ModuleSpecifier, parseModuleSpecifier, parseNPMExact, parseNPMImport } from "./specifier.ts";
-import { assert } from "jsr:@std/assert@^0.225.2/assert";
+import { assert } from "@std/assert/assert";
 import { is_excluded } from "./exclude.ts";
 import { supported_extensions } from "./constants.ts";
 
@@ -36,15 +36,23 @@ const DenoInfoPosition = z.object({
     character: z.number().int().nonnegative(),
 });
 
-const DenoInfoImport = z.object({
-    specifier: z.string(),
-    span: z.object({
-        start: DenoInfoPosition,
-        end: DenoInfoPosition,
-    }),
+const CodeSpan = z.object({
+    start: DenoInfoPosition,
+    end: DenoInfoPosition,
 });
 
-const DenoInfoModule = z.union([
+const DenoInfoImport = z.union([
+    z.object({
+        specifier: z.string(),
+        span: CodeSpan,
+    }),
+    z.object({
+        error: z.string(),
+        span: CodeSpan,
+    }),
+]);
+
+const DenoInfoModule = z.discriminatedUnion("kind", [
     z.object({
         kind: z.literal("esm"),
         specifier: z.string().transform(parseModuleSpecifier),
@@ -74,6 +82,11 @@ const DenoInfoModule = z.union([
         specifier: z.string().transform(parseModuleSpecifier),
         npmPackage: z.string(),
     }),
+    z.object({
+        kind: z.literal("external"),
+        specifier: z.string().transform(parseModuleSpecifier),
+        local: z.string().transform(toFileUrl),
+    }),
 ]);
 type DenoInfoModule = z.infer<typeof DenoInfoModule>;
 
@@ -86,9 +99,9 @@ const DenoInfoNPMPackage = z.object({
 const DenoInfoOutput = z.object({
     roots: z.string().array(),
     modules: DenoInfoModule.array(),
-    redirects: z.record(z.string().transform(parseModuleSpecifier)),
-    packages: z.record(z.string()),
-    npmPackages: z.record(DenoInfoNPMPackage),
+    redirects: z.record(z.string(), z.string().transform(parseModuleSpecifier)),
+    packages: z.record(z.string(), z.string()),
+    npmPackages: z.record(z.string(), DenoInfoNPMPackage),
 });
 
 export const npmImportKind = Symbol();
@@ -138,11 +151,20 @@ export class GraphModule {
         if (def.kind === "esm") {
             for (const dep of def.dependencies) {
                 if (dep.code) {
-                    graph.get_module(parseModuleSpecifier(dep.code.specifier), false).then((dep_mod) => {
-                        if (dep_mod) {
-                            mod.esm_dependencies.set(dep.specifier, dep_mod);
-                        }
-                    });
+                    if ("error" in dep.code) {
+                        graph.o.logger.error(`Error resolving dependency: {error}`, dep.code);
+                    } else {
+                        graph.get_module(parseModuleSpecifier(dep.code.specifier), false).then((dep_mod) => {
+                            if (dep_mod) {
+                                mod.esm_dependencies.set(dep.specifier, dep_mod);
+                            }
+                        });
+                    }
+                }
+                if (dep.type) {
+                    if ("error" in dep.type) {
+                        graph.o.logger.error(`Error resolving dependency (type import): {error}`, dep.code);
+                    }
                 }
             }
         }
@@ -203,13 +225,16 @@ export class GraphModule {
 
 export class ModuleGraph {
     constructor(readonly o: Opt) {
-        GraphModule.new({
-            kind: virtualImportKind,
-            specifier: parseModuleSpecifier("virtual:node:null"),
-            code() {
-                return Promise.resolve(`throw new Error("<virtual:node:null>");`);
+        GraphModule.new(
+            {
+                kind: virtualImportKind,
+                specifier: parseModuleSpecifier("virtual:node:null"),
+                code() {
+                    return Promise.resolve(`throw new Error("<virtual:node:null>");`);
+                },
             },
-        }, this);
+            this,
+        );
     }
 
     #pending: Promise<void> | null = null;
@@ -387,12 +412,15 @@ export class ModuleGraph {
                 const pkg = this.npm_packages.get(`${id.name}@${format(id.version)}`);
                 if (pkg) {
                     const spec = await pkg.resolve_import(id.path);
-                    const mod = GraphModule.new({
-                        kind: npmImportKind,
-                        package: pkg,
-                        specifier,
-                        module: spec,
-                    }, this);
+                    const mod = GraphModule.new(
+                        {
+                            kind: npmImportKind,
+                            package: pkg,
+                            specifier,
+                            module: spec,
+                        },
+                        this,
+                    );
                     // free-running prefetch
                     this.get_module(spec, false);
                     return mod;

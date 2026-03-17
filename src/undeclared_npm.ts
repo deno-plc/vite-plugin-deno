@@ -3,7 +3,7 @@
  *
  * vite-plugin-deno
  *
- * Copyright (C) 2024 Hans Schallmoser
+ * Copyright (C) 2024 - 2026 Hans Schallmoser
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -26,7 +26,7 @@ import { parseModuleSpecifier } from "./specifier.ts";
 import type { ModuleGraph } from "./graph.ts";
 
 const Schema = z.object({
-    redirects: z.record(z.string().transform(parseModuleSpecifier)),
+    redirects: z.record(z.string(), z.string().transform(parseModuleSpecifier)),
 });
 
 export function resolve_undeclared_npm(
@@ -40,7 +40,7 @@ export function resolve_undeclared_npm(
             graph
                 .call_deno(`npm:${pkg}`)
                 .then(Schema.parse)
-                .then(({ redirects }) => `${redirects[`npm:${pkg}`].href}#standalone`),
+                .then(({ redirects }) => `${new URL(redirects[`npm:${pkg}`]).href}#standalone`),
         );
     }
 }
